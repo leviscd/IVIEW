@@ -1,1 +1,87 @@
-<!DOCTYPE html><html><body>Categorias placeholder</body></html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IVIEW - Canais</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body class="channel-page">
+
+<h1 class="page-title" id="catTitle">Carregando...</h1>
+
+<div class="channel-list" id="channelList"></div>
+
+<footer>Powered by Levi</footer>
+
+<script src="js/app.js"></script>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const categoria = params.get('c');
+
+// ===============================
+// LISTA DE CANAIS COMPLETA
+// ===============================
+const canais = {
+
+    "esportes": [
+        {
+            nome: "Premiere 1",
+            logo: "img/premiere1.png",
+            url: "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/d485d118d525ae4326aa31371f5dfcef/premiere.m3u8"
+        },
+        {
+            nome: "Premiere 2",
+            logo: "img/premiere2.png",
+            url: "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/aa1f6257eeb308e3e6677bae5fb7f1c8/premiere2.m3u8"
+        }
+    ],
+
+    "noticias": [
+        {
+            nome: "Record News",
+            logo: "img/recordnews.png",
+            url: "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/3728ae10c1a4f5b4a394d9771ec12db2/record.m3u8"
+        }
+    ],
+
+    "infantil": [
+        {
+            nome: "Cartoon Network",
+            logo: "img/cartoon.png",
+            url: "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/f67e159151a581847c31a461034c795a/cartoonnetwork.m3u8"
+        },
+        {
+            nome: "Nickelodeon",
+            logo: "img/nick.png",
+            url: "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/528246d1903b4743bca33088eedc800f/nickelodeon.m3u8"
+        }
+    ]
+
+};
+
+
+// ===============================
+// GERAR LISTA DINAMICAMENTE
+// ===============================
+document.getElementById("catTitle").innerText =
+    categoria.charAt(0).toUpperCase() + categoria.slice(1);
+
+let html = "";
+
+canais[categoria].forEach(c => {
+    html += `
+        <div class="channel-item focusable" onclick="openChannel('${c.url}', '${c.nome}')">
+            <img src="${c.logo}" class="channel-logo">
+            <span>${c.nome}</span>
+        </div>
+    `;
+});
+
+document.getElementById("channelList").innerHTML = html;
+</script>
+
+</body>
+</html>
