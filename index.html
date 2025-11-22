@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPVIEW - Assistir TV AO VIVO</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HLS.js CDN for M3U8 playback -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Estilos e Cores Personalizados (Tema Escuro + Neon) */
+        :root {
+            --color-primary: #8B5CF6; /* Roxo */
+            --color-secondary: #06B6D4; /* Ciano */
+            --color-focus: #C4B5FD; /* Lavanda mais claro para foco */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0F172A; /* Azul escuro quase preto */
+            color: #E2E8F0; /* Texto claro */
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        /* Animação e Estilo do Foco para Smart TV */
+        .focusable:focus, .focusable.focused {
+            outline: none;
+            box-shadow: 0 0 10px 3px var(--color-focus), 0 0 20px 5px rgba(139, 92, 246, 0.7); /* Glow Neon */
+            transform: scale(1.05); /* Pequena animação de zoom */
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border-color: var(--color-focus);
+            z-index: 10;
+        }
+
+        .category-card, .channel-card {
+            background-color: #1E293B; /* Tom mais claro para cards */
+        }
+        
+        /* Oculta scrollbar mas permite scroll */
+        .hide-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none; /* Chrome, Safari and Opera */
+        }
+
+        /* Estilo específico do player */
+        #video-container {
+            position: relative;
+            width: 100%;
+            height: 100%; 
+        }
+        #video-player {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+        }
+        
+        /* Estilo para a tela do player quando em fullscreen-like mode (na view 'player') */
+        .player-view {
+            width: 100vw;
+            height: 100vh;
+            max-width: none !important;
+            padding: 0 !important;
+        }
+    </style>
+</head>
+<body>
+
+<main id="app-container" class="w-full max-w-7xl mx-auto p-4 md:p-8 flex items-center justify-center"></main>
+
+<script>
+    // =================================================================
+    // Módulo de Dados (channels.js)
+    // =================================================================
+    const CHANNEL_DATA = {
+        "esportes": [
+            {
+                "nome": "Premiere 1",
+                "url": "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/d485d118d525ae4326aa31371f5dfcef/premiere.m3u8"
+            },
+            {
+                "nome": "Premiere 2",
+                "url": "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/aa1f6257eeb308e3e6677bae5fb7f1c8/premiere2.m3u8"
+            }
+        ],
+        "noticias": [
+            {
+                "nome": "Record News",
+                "url": "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/3728ae10c1a4f5b4a394d9771ec12db2/record.m3u8"
+            }
+        ],
+        "infantil": [
+            {
+                "nome": "Cartoon Network",
+                "url": "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/f67e159151a581847c31a461034c795a/cartoonnetwork.m3u8" 
+            },
+            {
+                "nome": "Nickelodeon",
+                "url": "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/528246d1903b4743bca33088eedc800f/nickelodeon.m3u8" 
+            }
+        ],
+        "filmes_e_series": [
+            {
+                "nome": "Telecine Premium",
+                "url": "https://placehold.co/400x225/ba55d3/ffffff?text=Telecine" 
+            },
+            {
+                "nome": "HBO HD",
+                "url": "https://placehold.co/400x225/4b0082/ffffff?text=HBO" 
+            }
+        ],
+        "variedades": [
+            {
+                "nome": "Multishow",
+                "url": "https://placehold.co/400x225/daa520/000000?text=Multi" 
+            },
+            {
+                "nome": "GNT",
+                "url": "https://placehold.co/400x225/808080/ffffff?text=GNT" 
+            }
+        ]
+    };
+
+    // =================================================================
+    // Estado Global da Aplicação
+    // =================================================================
+    const STATE = {
+        view: 'home',
+        selectedCategory: null,
+        focusedElement: null,
+        playerState: {
+            channelName: null,
+            channelUrl: null,
+            hlsInstance: null,
+            controlsVisible: true,
+            controlsTimeout: null, // Gerencia o auto-hide da barra de info
+            isLagging: false // Novo estado para o indicador de ping/lag
+        }
+    };
+
+    const APP_CONTAINER = document.getElementById('app-container');
+
+    // =================================================================
+    // Módulo de Navegação Smart TV (tv-navigation.js)
+    // =================================================================
+
+    /**
+     * Define o foco visual para um elemento e atualiza o estado.
+     * @param {HTMLElement} element 
+     */
+    function setFocus(element) {
+        if (STATE.focusedElement) {
+            STATE.focusedElement.classList.remove('focused');
+            STATE.focusedElement.removeAttribute('tabindex'); // Remove tabindex do elemento anterior
+        }
+        
+        if (element) {
+            STATE.focusedElement = element;
+            STATE.focusedElement.classList.add('focused');
+            STATE.focusedElement.setAttribute('tabindex', '0'); // Garante que o novo elemento é focalizável
+            element.focus();
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            STATE.focusedElement = null;
+        }
+    }
+
+    /**
+     * Encontra o próximo elemento focalizável na direção especificada.
+     * @param {string} direction 'up', 'down', 'left', 'right'
+     * @returns {HTMLElement|null} O próximo elemento a focar.
+     */
+    function findNextFocus(direction) {
+        if (!STATE.focusedElement) return null;
+
+        const currentRect = STATE.focusedElement.getBoundingClientRect();
+        const focusables = Array.from(document.querySelectorAll('.focusable'));
+        
+        let bestCandidate = null;
+        let bestDistance = Infinity;
+
+        focusables.forEach(el => {
+            if (el === STATE.focusedElement) return;
+
+            const elRect = el.getBoundingClientRect();
+            let distance = Infinity;
+            
+            // Central coordinates
+            const currentX = currentRect.left + currentRect.width / 2;
+            const currentY = currentRect.top + currentRect.height / 2;
+            const elX = elRect.left + elRect.width / 2;
+            const elY = elRect.top + elRect.height / 2;
+
+            const dx = elX - currentX;
+            const dy = elY - currentY;
+
+            // Simple geometry-based search
+            switch (direction) {
+                case 'up':
+                    if (dy < 0 && Math.abs(dx) < currentRect.width * 1.5) { // Prioriza elementos acima
+                        distance = Math.abs(dy) + Math.abs(dx) * 0.5; // Pondera mais a distância vertical
+                    }
+                    break;
+                case 'down':
+                    if (dy > 0 && Math.abs(dx) < currentRect.width * 1.5) { // Prioriza elementos abaixo
+                        distance = Math.abs(dy) + Math.abs(dx) * 0.5;
+                    }
+                    break;
+                case 'left':
+                    if (dx < 0 && Math.abs(dy) < currentRect.height * 1.5) { // Prioriza elementos à esquerda
+                        distance = Math.abs(dx) + Math.abs(dy) * 0.5;
+                    }
+                    break;
+                case 'right':
+                    if (dx > 0 && Math.abs(dy) < currentRect.height * 1.5) { // Prioriza elementos à direita
+                        distance = Math.abs(dx) + Math.abs(dy) * 0.5;
+                    }
+                    break;
+            }
+
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                bestCandidate = el;
+            }
+        });
+
+        return bestCandidate;
+    }
+
+    /**
+     * Manipulador de eventos de teclado para navegação Smart TV.
+     * @param {KeyboardEvent} e 
+     */
+    function handleKeyDown(e) {
+        if (STATE.view === 'player') {
+            handlePlayerKeys(e);
+            return;
+        }
+
+        let nextElement = null;
+
+        switch (e.key) {
+            case 'ArrowUp':
+                nextElement = findNextFocus('up');
+                break;
+            case 'ArrowDown':
+                nextElement = findNextFocus('down');
+                break;
+            case 'ArrowLeft':
+                nextElement = findNextFocus('left');
+                break;
+            case 'ArrowRight':
+                nextElement = findNextFocus('right');
+                break;
+            case 'Enter':
+                if (STATE.focusedElement) {
+                    STATE.focusedElement.click(); // Simula o clique no elemento focado
+                }
+                break;
+            case 'Escape':
+                // Implementa a função "Voltar" (←)
+                if (STATE.view === 'categories') {
+                    navigate('home');
+                } else if (STATE.view === 'channels') {
+                    navigate('categories');
+                }
+                break;
+            default:
+                return;
+        }
+
+        if (nextElement) {
+            e.preventDefault(); // Evita scroll da página
+            setFocus(nextElement);
+        }
+    }
+
+    // =================================================================
+    // Módulo do Player (player.js)
+    // =================================================================
+
+    /**
+     * Sai do modo tela cheia se estiver ativo.
+     */
+    function exitFullscreen() {
+        if (document.fullscreenElement) {
+            document.exitFullscreen();
+        }
+    }
+    
+    /**
+     * Mostra o indicador de lag/ping.
+     * @param {string} status 
+     */
+    function showLagIndicator(status) {
+        const lagIndicator = document.getElementById('lag-indicator');
+        const pingValue = document.getElementById('ping-value');
+
+        if (lagIndicator && pingValue && !STATE.playerState.isLagging) {
+            pingValue.textContent = status;
+            // Estilos para o estado de lag: opacidade total e cor vermelha
+            lagIndicator.classList.remove('opacity-0', 'border-gray-500');
+            lagIndicator.classList.add('opacity-100', 'border-red-500');
+            STATE.playerState.isLagging = true;
+        }
+    }
+
+    /**
+     * Esconde o indicador de lag/ping.
+     */
+    function hideLagIndicator() {
+        const lagIndicator = document.getElementById('lag-indicator');
+        if (lagIndicator && STATE.playerState.isLagging) {
+            lagIndicator.classList.remove('opacity-100', 'border-red-500');
+            lagIndicator.classList.add('opacity-0', 'border-gray-500');
+            STATE.playerState.isLagging = false;
+        }
+    }
+
+    /**
+     * Inicializa o player HLS.
+     * @param {string} url - URL do stream .m3u8
+     */
+    function initializeHlsPlayer(url) {
+        const video = document.getElementById('video-player');
+        if (!video) return;
+
+        // Tenta entrar em tela cheia automaticamente ao carregar (Pode precisar de gesto do usuário em alguns navegadores)
+        const container = document.getElementById('video-container');
+        if (container && container.requestFullscreen) {
+            container.requestFullscreen().catch(err => {
+                console.log("Falha ao tentar Fullscreen. Necessita de interação do usuário. ", err);
+            });
+        }
+
+        if (STATE.playerState.hlsInstance) {
+            STATE.playerState.hlsInstance.destroy();
+        }
+
+        if (Hls.isSupported()) {
+            const hls = new Hls();
+            STATE.playerState.hlsInstance = hls;
+            hls.loadSource(url);
+            hls.attachMedia(video);
+
+            hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                video.play().catch(e => {
+                    displayPlayerMessage("Clique na tela para iniciar a reprodução (restrição do navegador).");
+                    console.log("Player not started, user gesture needed:", e);
+                });
+            });
+            
+            // --- Lógica de Lag/Ping ---
+            hls.on(Hls.Events.BUFFER_EMPTY, function() {
+                // Buffer vazio, pode causar travamento. Mostra o indicador.
+                showLagIndicator('Travando...');
+            });
+
+            hls.on(Hls.Events.BUFFER_STALLED, function() {
+                // Playback parou. Mostra o indicador.
+                showLagIndicator('STALL: Verificando...');
+            });
+            
+            // Oculta o indicador quando a reprodução é retomada
+            video.addEventListener('playing', hideLagIndicator);
+            
+            hls.on(Hls.Events.FRAG_LOADED, function(event, data) {
+                // Calcula uma estimativa de latência de download do fragmento
+                const fragLoadTime = data.stats.tload - data.stats.trequest;
+                const pingElement = document.getElementById('ping-value');
+                
+                // Atualiza o ping se houver um travamento ativo
+                if(STATE.playerState.isLagging && pingElement) {
+                     pingElement.textContent = `LAG: ${Math.round(fragLoadTime)}ms`;
+                }
+
+                // Se o buffer estiver cheio o suficiente, esconde o indicador
+                if (video.buffered.length > 0 && video.buffered.end(0) > video.currentTime + 1) {
+                    hideLagIndicator();
+                }
+            });
+            // -------------------------
+
+            hls.on(Hls.Events.ERROR, function (event, data) {
+                if (data.fatal) {
+                    showLagIndicator('Erro Fatal!');
+                    // Tenta se recuperar
+                    switch(data.type) {
+                        case Hls.ErrorTypes.NETWORK_ERROR:
+                            console.error("HLS Network Error. Retrying...", data);
+                            hls.startLoad();
+                            break;
+                        case Hls.ErrorTypes.MEDIA_ERROR:
+                            console.error("HLS Media Error. Recovering...", data);
+                            hls.recoverMediaError();
+                            break;
+                        default:
+                            console.error("HLS Fatal Error. Destroying.", data);
+                            hls.destroy();
+                            displayPlayerMessage("Erro fatal na reprodução HLS.");
+                            break;
+                    }
+                }
+            });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            // Fallback para navegadores nativos (ex: Safari no iOS/macOS)
+            video.src = url;
+            video.addEventListener('loadedmetadata', () => video.play());
+            video.addEventListener('waiting', () => showLagIndicator('Aguardando...'));
+            video.addEventListener('playing', hideLagIndicator);
+
+        } else {
+            // Fallback geral
+            displayPlayerMessage("Seu navegador não suporta reprodução HLS nativa nem via hls.js.");
+        }
+
+        // Se o usuário clicar no vídeo, tenta dar play (se estiver pausado)
+        video.addEventListener('click', () => {
+             if (video.paused) {
+                video.play().catch(e => console.log("Play blocked:", e));
+            }
+            showPlayerControls(true); // Mostra controles e reinicia o timer
+        });
+        
+        // Configura o timer inicial de auto-hide
+        showPlayerControls(true); 
+    }
+
+    /**
+     * Exibe uma mensagem de status no player.
+     * @param {string} message 
+     */
+    function displayPlayerMessage(message) {
+        const infoDiv = document.getElementById('player-info-content');
+        if(infoDiv) {
+            infoDiv.innerHTML = `<p class="text-xl text-red-400">${message}</p>`;
+            showPlayerControls(true);
+        }
+    }
+
+    /**
+     * Alterna a visibilidade dos controles/barra de informações e gerencia o timer de auto-hide.
+     * @param {boolean} force - Opcional, força o estado (true/false)
+     */
+    function showPlayerControls(force) {
+        const controls = document.getElementById('player-controls');
+        const info = document.getElementById('player-info');
+
+        if (!controls || !info) return;
+
+        const newState = typeof force === 'boolean' ? force : !STATE.playerState.controlsVisible;
+        
+        // Limpa qualquer timeout existente
+        if (STATE.playerState.controlsTimeout) {
+            clearTimeout(STATE.playerState.controlsTimeout);
+            STATE.playerState.controlsTimeout = null;
+        }
+
+        if (newState) {
+            // Mostrar controles e barra de info
+            controls.classList.remove('opacity-0', 'pointer-events-none');
+            info.classList.remove('opacity-0');
+            STATE.playerState.controlsVisible = true;
+
+            // Define um novo timeout para ocultar após 5 segundos
+            STATE.playerState.controlsTimeout = setTimeout(() => {
+                showPlayerControls(false);
+            }, 5000); 
+        } else {
+            // Ocultar controles e barra de info
+            controls.classList.add('opacity-0', 'pointer-events-none');
+            info.classList.add('opacity-0');
+            STATE.playerState.controlsVisible = false;
+        }
+    }
+
+    /**
+     * Manipulador de teclas específico para a tela do player.
+     * @param {KeyboardEvent} e 
+     */
+    function handlePlayerKeys(e) {
+        const video = document.getElementById('video-player');
+        if (!video) return;
+        
+        // Teclas de Voltar: ESC, ArrowLeft, Backspace
+        if (e.key === 'Escape' || e.key === 'ArrowLeft' || e.key === 'Backspace') {
+            e.preventDefault();
+            exitFullscreen(); // Sai do fullscreen antes de navegar
+            // Limpa o player antes de voltar
+            if (STATE.playerState.hlsInstance) {
+                STATE.playerState.hlsInstance.destroy();
+                STATE.playerState.hlsInstance = null;
+            }
+            // Limpa o timeout de auto-hide
+            if (STATE.playerState.controlsTimeout) {
+                clearTimeout(STATE.playerState.controlsTimeout);
+                STATE.playerState.controlsTimeout = null;
+            }
+            navigate('channels', STATE.selectedCategory);
+            return;
+        }
+
+        // Tecla Enter ou Espaço: Alterna visibilidade dos controles/info bar (Requisito)
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            showPlayerControls(); // Alterna e reinicia o timer se mostrar
+            return;
+        }
+
+        // Bloqueia qualquer outra tecla de controle (como 'p' para pause, que é padrão do navegador)
+        if (e.key === 'p' || e.key === 'P' || e.key === 'k' || e.key === 'K') {
+            e.preventDefault(); // Bloqueia o pause
+        }
+    }
+
+    // =================================================================
+    // Módulo de Renderização de Views
+    // =================================================================
+
+    /**
+     * Função principal de navegação e renderização de views.
+     * @param {string} viewName - Nome da view ('home', 'categories', 'channels', 'player')
+     * @param {string} data - Dados adicionais (ex: nome da categoria, URL do canal)
+     */
+    function navigate(viewName, data = null) {
+        STATE.view = viewName;
+        // Limpa o foco ao mudar de tela
+        setFocus(null); 
+        
+        let htmlContent = '';
+        let initialFocusSelector = null;
+
+        // Limpa classes específicas do player e define o padrão
+        APP_CONTAINER.className = "w-full max-w-7xl mx-auto p-4 md:p-8 flex";
+
+        switch (viewName) {
+            case 'home':
+                htmlContent = renderHomePage();
+                APP_CONTAINER.classList.add('min-h-screen', 'items-center', 'justify-center');
+                initialFocusSelector = '#home-button';
+                break;
+            case 'categories':
+                htmlContent = renderCategoriesPage();
+                APP_CONTAINER.classList.remove('items-center', 'justify-center');
+                initialFocusSelector = '.category-card';
+                break;
+            case 'channels':
+                exitFullscreen(); // Garante que saiu do fullscreen ao voltar
+                STATE.selectedCategory = data;
+                htmlContent = renderChannelsPage(data);
+                APP_CONTAINER.classList.remove('items-center', 'justify-center');
+                initialFocusSelector = '.channel-card';
+                break;
+            case 'player':
+                const [name, url] = data.split('|');
+                STATE.playerState.channelName = name;
+                STATE.playerState.channelUrl = url;
+                htmlContent = renderPlayerPage(name, url);
+                
+                // Aplica classes para visualização em tela cheia/viewport total
+                APP_CONTAINER.classList.add('player-view');
+                APP_CONTAINER.classList.remove('max-w-7xl', 'p-4', 'md:p-8');
+
+                // O foco inicial é o botão de Voltar
+                initialFocusSelector = '#back-btn'; 
+                break;
+            default:
+                htmlContent = renderHomePage();
+                initialFocusSelector = '#home-button';
+        }
+
+        APP_CONTAINER.innerHTML = htmlContent;
+
+        // Configura o foco inicial após a renderização
+        if (initialFocusSelector) {
+            // O timeout garante que todos os elementos estejam no DOM
+            setTimeout(() => {
+                const firstElement = document.querySelector(initialFocusSelector);
+                if (firstElement) {
+                    setFocus(firstElement);
+                }
+            }, 50);
+
+        }
+
+        // Ações específicas pós-renderização
+        if (viewName === 'player') {
+            initializeHlsPlayer(STATE.playerState.channelUrl);
+        }
+    }
+
+    /**
+     * Renderiza a página inicial (Requisito 1).
+     */
+    function renderHomePage() {
+        return `
+            <div class="flex flex-col items-center justify-center text-center w-full min-h-[80vh]">
+                <h1 class="text-7xl md:text-9xl font-extrabold mb-12" style="color: var(--color-secondary); text-shadow: 0 0 15px var(--color-secondary);">
+                    IPVIEW
+                </h1>
+                <button 
+                    id="home-button"
+                    class="focusable px-12 py-6 text-2xl font-bold rounded-xl bg-violet-600 hover:bg-violet-700 transition-colors duration-200 border-2 border-transparent"
+                    onclick="navigate('categories')"
+                >
+                    ASSISTIR TV AO VIVO
+                </button>
+            </div>
+        `;
+    }
+
+    /**
+     * Renderiza a página de categorias (Requisito 2).
+     */
+    function renderCategoriesPage() {
+        const categories = {
+            "esportes": "Esportes",
+            "noticias": "Notícias",
+            "infantil": "Infantil",
+            "filmes_e_series": "Filmes e Séries",
+            "variedades": "Variedades"
+        };
+
+        const categoryCards = Object.entries(categories).map(([key, name]) => `
+            <div class="focusable category-card rounded-xl p-6 h-full flex items-center justify-center border-2 border-transparent transition-all cursor-pointer"
+                 data-category="${key}"
+                 onclick="navigate('channels', '${key}')">
+                <h2 class="text-xl md:text-3xl font-semibold text-center">${name}</h2>
+            </div>
+        `).join('');
+
+        return `
+            <div class="w-full">
+                <h1 class="text-3xl md:text-5xl font-bold mb-8 text-center" style="color: var(--color-primary);">Categorias de TV</h1>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    ${categoryCards}
+                </div>
+                <p class="text-sm text-gray-400 mt-8 text-center">Use as setas do teclado (↑ ↓ ← →) e Enter para navegar no estilo Smart TV.</p>
+            </div>
+        `;
+    }
+
+    /**
+     * Renderiza a lista de canais (Requisito 3).
+     * @param {string} categoryKey 
+     */
+    function renderChannelsPage(categoryKey) {
+        const channels = CHANNEL_DATA[categoryKey] || [];
+        const categoryName = categoryKey.split('_').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+
+        if (channels.length === 0) {
+            return `<div class="w-full text-center p-20">
+                        <h1 class="text-4xl font-bold text-red-500">Nenhum canal encontrado para ${categoryName}.</h1>
+                        <button class="focusable mt-8 px-6 py-3 bg-gray-600 rounded-lg border-2 border-transparent" onclick="navigate('categories')">Voltar às Categorias</button>
+                    </div>`;
+        }
+
+        const channelCards = channels.map(channel => `
+            <div class="focusable channel-card rounded-xl overflow-hidden border-2 border-transparent transition-all cursor-pointer shadow-lg hover:shadow-xl"
+                 onclick="navigate('player', '${channel.nome}|${channel.url}')">
+                
+                <!-- Imagem de Placeholder para simular logo/preview -->
+                <div class="w-full aspect-video flex items-center justify-center bg-gray-700 text-gray-300">
+                    <span class="text-3xl font-bold">${channel.nome.substring(0, 2)}</span>
+                </div>
+                
+                <div class="p-4">
+                    <h3 class="text-lg font-semibold truncate" style="color: var(--color-secondary);">${channel.nome}</h3>
+                    <p class="text-sm text-gray-400">Clique para assistir ao vivo</p>
+                </div>
+            </div>
+        `).join('');
+
+        return `
+            <div class="w-full">
+                <h1 class="text-3xl md:text-4xl font-bold mb-6" style="color: var(--color-primary);">${categoryName}</h1>
+                <button class="focusable px-4 py-2 mb-6 text-sm bg-gray-700 rounded-lg border-2 border-transparent transition-all" onclick="navigate('categories')">
+                    &larr; Voltar
+                </button>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                    ${channelCards}
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Renderiza a página do player (Requisito 4).
+     * @param {string} name - Nome do canal
+     * @param {string} url - URL do canal
+     */
+    function renderPlayerPage(name, url) {
+        return `
+            <!-- A classe player-view garante que o container principal ocupe todo o viewport -->
+            <div class="w-full h-full relative">
+                <div id="video-container" class="w-full h-full rounded-none overflow-hidden">
+                    <!-- O atributo controls foi removido. A propriedade playsinline é boa para mobile -->
+                    <video id="video-player" autoplay playsinline></video>
+
+                    <!-- Barra de Informações do Player (Visível por 5s, depois auto-hide) -->
+                    <div id="player-info" class="absolute top-0 left-0 w-full p-6 bg-gradient-to-b from-black/80 to-transparent transition-opacity duration-300">
+                        <h2 class="text-3xl font-bold text-white">${name}</h2>
+                        <div id="player-info-content" class="text-lg mt-1">
+                            Reproduzindo ao vivo. Pressione ENTER para ocultar ou mostrar controles/info.
+                        </div>
+                    </div>
+                    
+                    <!-- Ping/Lag Indicator (Canto Superior Direito) -->
+                    <div id="lag-indicator" class="absolute top-4 right-4 z-50 transition-opacity duration-300 opacity-0 pointer-events-none">
+                        <div class="flex items-center space-x-2 p-2 rounded-full bg-black/60 backdrop-blur-sm text-white border border-gray-500">
+                            <!-- Ícone de Círculo com cor do Status -->
+                            <div id="ping-circle" class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <!-- Mock Ping Value / Status -->
+                            <span id="ping-value" class="font-bold text-sm text-white">Status: OK</span>
+                        </div>
+                    </div>
+
+                    <!-- Controles de Navegação do Player (Apenas Voltar) -->
+                    <!-- Inset-0 preenche todo o vídeo, justify-start alinha o botão à esquerda -->
+                    <div id="player-controls" class="absolute inset-0 flex items-center justify-start p-10 transition-opacity duration-300">
+                        
+                        <!-- Container para o botão Voltar - Estilo Moderno/TV -->
+                        <div class="flex space-x-6">
+                            
+                            <!-- Botão Voltar (← / ESC) - Mais bonito e proeminente -->
+                            <button id="back-btn" 
+                                    class="focusable w-16 h-16 rounded-full text-white border-2 border-transparent 
+                                           bg-violet-600/70 hover:bg-violet-700 transition-all shadow-xl hover:shadow-2xl"
+                                    title="Voltar para Canais"
+                                    onclick="document.dispatchEvent(new KeyboardEvent('keydown', {'key':'Escape'}))">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-10 h-10 mx-auto">
+                                    <path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-4.28 9.22a.75.75 0 0 0 0 1.06l3 3a.75.75 0 1 0 1.06-1.06l-1.72-1.72h5.69a.75.75 0 0 0 0-1.5h-5.69l1.72-1.72a.75.75 0 0 0-1.06-1.06l-3 3Z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // =================================================================
+    // Inicialização da Aplicação
+    // =================================================================
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Inicializa a navegação com a tecla ESC para voltar (mesmo fora do player)
+        document.addEventListener('keydown', handleKeyDown);
+
+        // Inicia na tela inicial
+        navigate('home');
+    });
+
+    // Função de utilidade para simular o clique no elemento focado se o usuário clicar no elemento.
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('focusable')) {
+            setFocus(e.target);
+        }
+    });
+
+    // Adiciona listener para sair do fullscreen se o usuário sair manualmente
+    document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement && STATE.view === 'player') {
+            // Se saiu do fullscreen, navega de volta para a lista de canais
+            document.dispatchEvent(new KeyboardEvent('keydown', {'key':'Escape'}));
+        }
+    });
+
+</script>
+
+</body>
+</html>
