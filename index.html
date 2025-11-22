@@ -3,43 +3,721 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>iTv - IPTV Futurista</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <title>iView - IPTV</title>
+    <!-- Inclui Font Awesome para ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Variáveis de Cores e Estilo */
+        :root {
+            --dark-bg: #121212;
+            --main-bg: #1c1c1c;
+            --highlight-color: #9333ea; /* Violeta principal */
+            --focus-bg: #5a2484; /* Fundo do item selecionado/focado */
+            --text-light: #e0e0e0;
+            --text-dark: #a0a0a0;
+        }
+
+        /* Configuração do Tailwind para usar cores customizadas */
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary-dark': 'var(--dark-bg)',
+                        'secondary-dark': 'var(--main-bg)',
+                        'accent-violet': 'var(--highlight-color)',
+                        'focus-bg': 'var(--focus-bg)',
+                        'text-light': 'var(--text-light)',
+                        'text-dark': 'var(--text-dark)',
+                    },
+                }
+            }
+        }
+
+        /* Estilos Globais e de Layout */
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            background-color: #000000; /* Fundo mais escuro */
+            color: var(--text-light);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 0;
+        }
+
+        /* Container Principal do IPTV - Centralizado e com Brilho */
+        .iptv-container {
+            width: 95%;
+            max-width: 1400px;
+            height: 90vh;
+            min-height: 500px;
+            background-color: var(--main-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 0 50px rgba(147, 51, 234, 0.6);
+            display: flex;
+            gap: 20px;
+            transition: all 0.5s ease-in-out;
+        }
+
+        /* Estilo para Foco (MUITO Importante para TV) */
+        .category-item.focus,
+        .channel-item.focus {
+            outline: none;
+            background-color: var(--focus-bg) !important;
+            color: white;
+            transform: scale(1.05); /* Animação mais perceptível */
+            box-shadow: 0 0 15px rgba(147, 51, 234, 0.9);
+            border: 1px solid var(--highlight-color);
+        }
+
+        /* Estilos para o modo Full Player */
+        .iptv-container.full-player-mode {
+            width: 100vw;
+            height: 100vh;
+            border-radius: 0;
+            padding: 0;
+            box-shadow: none;
+        }
+
+        .iptv-container.full-player-mode .sidebar,
+        .iptv-container.full-player-mode .channel-list-wrapper {
+            display: none; /* Esconde as laterais */
+        }
+
+        .iptv-container.full-player-mode .main-content {
+            flex-grow: 1;
+            padding: 0;
+            display: flex; /* Garante que o player use o espaço total */
+        }
+        
+        .iptv-container.full-player-mode .video-player {
+            border-radius: 0;
+            border: none;
+        }
+
+        /* --- Coluna de Categorias (Sidebar) --- */
+        .sidebar {
+            width: 180px;
+            flex-shrink: 0;
+            padding-right: 15px;
+            border-right: 1px solid var(--dark-bg);
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            max-height: 100%;
+            overflow-y: auto; /* Permite rolagem da lista de categorias */
+            transition: all 0.5s ease-in-out;
+        }
+        .sidebar::-webkit-scrollbar, .channel-list::-webkit-scrollbar { width: 6px; }
+        .sidebar::-webkit-scrollbar-thumb, .channel-list::-webkit-scrollbar-thumb { background-color: var(--focus-bg); border-radius: 3px; }
+
+        .logo { margin-bottom: 25px; padding-left: 10px; }
+        .logo i { font-size: 30px; color: var(--highlight-color); margin-right: 8px; }
+        .logo h1 { font-size: 24px; font-weight: 700; margin: 0; }
+
+        .category-item {
+            padding: 12px 10px;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .category-item.selected {
+            background-color: rgba(147, 51, 234, 0.2);
+            color: var(--text-light);
+        }
+
+        /* --- Coluna de Canais --- */
+        .channel-list-wrapper {
+            width: 280px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--dark-bg);
+            padding-right: 15px;
+        }
+
+        .channel-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            max-height: 100%;
+            transition: all 0.5s ease-in-out;
+        }
+
+        .channel-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 8px;
+            margin-bottom: 5px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .channel-number {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--dark-bg);
+            background-color: var(--highlight-color);
+            padding: 3px 7px;
+            border-radius: 3px;
+            margin-right: 10px;
+            min-width: 35px;
+            text-align: center;
+        }
+
+        /* --- Player de Vídeo --- */
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+        }
+        
+        .video-player {
+            flex-grow: 1;
+            background-color: #000;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid var(--dark-bg);
+            transition: all 0.5s ease-in-out;
+            cursor: pointer; /* Permite clique para Fullscreen */
+        }
+        
+        .video-wrapper, .video-wrapper video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* Overlay e Controles */
+        .player-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+            padding: 15px 20px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .video-player:hover .player-overlay,
+        .video-player.player-controls-visible .player-overlay,
+        .video-player.focus .player-overlay { /* Mostra controles ao focar */
+            opacity: 1;
+        }
+        
+        .control-button.focus {
+            color: var(--highlight-color);
+            transform: scale(1.1);
+        }
+
+        /* Informação do Canal no Player (Canto Superior Direito) */
+        .channel-info-player {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        /* Responsividade para Mobile/Tablet */
+        @media (max-width: 1024px) {
+            .iptv-container {
+                flex-direction: column;
+                height: auto;
+                min-height: 100vh;
+                padding: 10px;
+            }
+            .sidebar, .channel-list-wrapper {
+                width: 100% !important;
+                border-right: none !important;
+                border-bottom: 1px solid var(--dark-bg);
+                padding-bottom: 10px;
+            }
+            .channel-list {
+                max-height: 250px !important;
+            }
+            .video-player {
+                width: 100% !important;
+                height: 40vh;
+            }
+        }
+    </style>
 </head>
-<body id="app-container">
-    
-    <div id="player-screen" class="hidden">
+<body>
+
+    <div class="iptv-container" id="iptv-container">
+        
+        <!-- COLUNA 1: CATEGORIAS -->
+        <div class="sidebar" data-section="categories">
+            <div class="logo">
+                <i class="fas fa-eye"></i>
+                <h1>iView</h1>
+            </div>
+
+            <!-- Itens de Categoria com Foco Inicial -->
+            <div class="category-item focus" data-category="ESPORTES">ESPORTES</div> 
+            <div class="category-item" data-category="FILMES">FILMES</div>
+            <div class="category-item" data-category="SÉRIES">SÉRIES</div>
+            <div class="category-item" data-category="AO VIVO">AO VIVO</div>
+            <div class="category-item" data-category="NOTÍCIAS">NOTÍCIAS</div>
+            <div class="category-item" data-category="DOCUMENTÁRIOS">DOCUMENTÁRIOS</div>
+            <div class="category-item" data-category="INFANTIL">INFANTIL</div>
+            <div class="category-item" data-category="CONFIGURAÇÕES">CONFIGURAÇÕES</div>
+
         </div>
 
-    <div id="main-interface">
-        
-        <aside id="sidebar">
-            <div class="logo-container">
-                <h1 class="logo-text">iTv</h1>
-            </div>
-
-            <nav id="categories-list">
-                </nav>
-
-            <div class="bottom-menu">
-                <a href="#" class="focusable" data-focus-area="bottom" data-index="0" id="search-icon"><i class="fas fa-search"></i></a>
-                <a href="#" class="focusable" data-focus-area="bottom" data-index="1" id="settings-icon"><i class="fas fa-cog"></i></a>
-            </div>
-        </aside>
-
-        <main id="content-area">
-            <h2 id="category-title">TV ABERTA AO VIVO</h2>
+        <!-- COLUNA 2 e 3: LISTA DE CANAIS + PLAYER -->
+        <div class="main-content">
             
-            <div id="channel-grid">
+            <!-- COLUNA 2: LISTA DE CANAIS -->
+            <div class="channel-list-wrapper">
+                <div class="channel-list" data-section="channels" id="channel-list">
+                    <!-- Canais serão injetados aqui pelo JavaScript -->
                 </div>
-            
-            <div id="no-channels" class="hidden">
-                <p>Nenhum canal encontrado nesta categoria.</p>
             </div>
-        </main>
+
+            <!-- COLUNA 3: PLAYER DE VÍDEO -->
+            <div class="video-player" data-section="player" id="video-player-container">
+                <div class="video-wrapper">
+                    <!-- Clicar no vídeo também vai para tela cheia -->
+                    <video id="iptv-video" autoplay muted playsinline></video>
+                </div>
+                
+                <!-- Overlay de Controles -->
+                <div class="player-overlay">
+                    <div class="mb-2 text-sm font-semibold text-text-light" id="player-channel-title" data-action="fullscreen">PREMIERE - Clique para Fullscreen</div>
+                    <div class="controls-row">
+                        
+                        <i class="fas fa-step-backward control-button text-lg" data-control="prev"></i>
+                        <i class="fas fa-pause control-button text-2xl" data-control="playpause" id="play-pause-btn"></i>
+                        <i class="fas fa-step-forward control-button text-lg" data-control="next"></i>
+
+                        <!-- Barra de Progresso/Tempo (Simulado para Live TV) -->
+                        <div class="progress-bar">
+                            <div class="progress-bar-fill"></div>
+                        </div>
+
+                        <i class="fas fa-volume-up control-button" data-control="volume" id="volume-btn"></i>
+                        <i class="fas fa-expand control-button ml-4" data-control="fullscreen" id="fullscreen-btn"></i>
+                    </div>
+                </div>
+
+                <!-- Informação do Canal Ativo no Player -->
+                <div class="channel-info-player" id="player-info-display">
+                    <i class="fas fa-broadcast-tower"></i>
+                    <span>101 PREMIERE - AO VIVO</span>
+                </div>
+
+                <!-- Mensagem de carregamento/erro -->
+                <div class="absolute inset-0 bg-black bg-opacity-90 flex items-center justify-center text-xl hidden" id="player-message">
+                    Carregando canal...
+                </div>
+            </div>
+        </div>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+        // MOCK DATA: Canais e URLs
+        const MOCK_CHANNELS = {
+            "ESPORTES": [
+                { num: 101, name: "PREMIERE", url: "https://d1muf25xa11so8hp23.s27-usa-cloudfront-net.online/token/b370528dc554e8f49bef089794e5a1f6/premiere.m3u8" },
+                { num: 102, name: "SPORTS ARENA", url: "https://mock-url-102.mp4" },
+                { num: 103, name: "GLOBAL SPORTS HD", url: "https://mock-url-103.mp4" },
+                { num: 104, name: "FUTEBOL 24/7", url: "https://mock-url-104.mp4" },
+                { num: 105, name: "BANDSPORTS", url: "https://mock-url-105.mp4" },
+                { num: 106, name: "NFL CHANNEL", url: "https://mock-url-106.mp4" },
+                { num: 107, name: "MMA ZONE", url: "https://mock-url-107.mp4" },
+                { num: 108, name: "TÊNIS HD", url: "https://mock-url-108.mp4" },
+            ],
+            "FILMES": [
+                { num: 201, name: "CINEMA ACTION", url: "https://mock-url-201.mp4" },
+                { num: 202, name: "FILMES CLÁSSICOS", url: "https://mock-url-202.mp4" },
+                { num: 203, name: "TELA QUENTE HD", url: "https://mock-url-203.mp4" },
+            ],
+            "SÉRIES": [
+                { num: 301, name: "NETFLIX HITS", url: "https://mock-url-301.mp4" },
+                { num: 302, name: "HULU ORIGINAIS", url: "https://mock-url-302.mp4" },
+            ],
+            "AO VIVO": [
+                { num: 401, name: "NOTÍCIAS 24H", url: "https://mock-url-401.mp4" },
+                { num: 402, name: "MÚSICA LIVE", url: "https://mock-url-402.mp4" },
+            ],
+            "NOTÍCIAS": [
+                { num: 501, name: "NEWS GLOBAL", url: "https://mock-url-501.mp4" },
+                { num: 502, name: "ECONOMIA HOJE", url: "https://mock-url-502.mp4" },
+            ],
+            "DOCUMENTÁRIOS": [
+                { num: 601, name: "NATUREZA SELVAGEM", url: "https://mock-url-601.mp4" },
+            ],
+            "INFANTIL": [
+                { num: 701, name: "CARTOON KIDS", url: "https://mock-url-701.mp4" },
+                { num: 702, name: "ANIMAIS FOFOS", url: "https://mock-url-702.mp4" },
+            ],
+            "CONFIGURAÇÕES": [
+                { num: 901, name: "AJUSTES DE TELA", url: "" },
+                { num: 902, name: "GERENCIAR CONTA", url: "" },
+            ]
+        };
+
+        const elements = {
+            container: document.getElementById('iptv-container'),
+            channelListContainer: document.getElementById('channel-list'),
+            videoPlayer: document.getElementById('iptv-video'),
+            playPauseBtn: document.getElementById('play-pause-btn'),
+            playerContainer: document.getElementById('video-player-container'),
+            playerInfoDisplay: document.getElementById('player-info-display'),
+            playerTitle: document.getElementById('player-channel-title'),
+            playerMessage: document.getElementById('player-message'),
+            categories: [], 
+            channels: [], 
+        };
+
+        let currentSection = 'categories';
+        let focusedIndex = 0;
+        let isFullPlayerMode = false;
+        
+        // Mantém o estado do canal atualmente selecionado
+        let currentChannel = MOCK_CHANNELS["ESPORTES"][0]; 
+
+        // --- Funções de Estado e Layout ---
+
+        /**
+         * Alterna o modo Full Player (tela cheia)
+         */
+        function toggleFullPlayerMode(enable) {
+            isFullPlayerMode = enable;
+            elements.container.classList.toggle('full-player-mode', enable);
+            
+            if (!enable) {
+                // Ao sair do modo full screen, retorna o foco para a lista de canais (delay para transição)
+                setTimeout(() => {
+                    // Renderiza canais da categoria ativa
+                    const currentCategory = document.querySelector('.category-item.focus')?.getAttribute('data-category') || "ESPORTES";
+                    renderChannels(currentCategory);
+                    setCurrentSection('channels');
+                    
+                    // Tenta restaurar o foco no canal que estava sendo assistido
+                    const currentChannelIndex = elements.channels.findIndex(el => el.getAttribute('data-channel-num') == currentChannel.num);
+                    focusedIndex = currentChannelIndex !== -1 ? currentChannelIndex : 0;
+                    updateFocus();
+                }, 500); 
+            } else {
+                // Ao entrar em full screen, move o foco para o player (embora o layout esteja escondido)
+                setCurrentSection('player');
+            }
+        }
+        
+        /**
+         * Altera a seção de foco (categories, channels ou player) e reseta o índice
+         */
+        function setCurrentSection(section) {
+            if (currentSection !== section) {
+                currentSection = section;
+                focusedIndex = 0; 
+                updateFocus(); // Chama updateFocus para redefinir o foco inicial
+            }
+        }
+
+        // --- Funções de Renderização e Atualização de Conteúdo ---
+
+        /**
+         * Renderiza os canais da categoria selecionada
+         */
+        function renderChannels(categoryName) {
+            const channels = MOCK_CHANNELS[categoryName] || [];
+            elements.channelListContainer.innerHTML = '';
+            elements.channels = [];
+            
+            if (categoryName === 'CONFIGURAÇÕES') {
+                 elements.channelListContainer.innerHTML = `<div class="p-4 text-center text-accent-violet font-semibold">Configurações e Ajuda</div>`;
+            } else if (channels.length === 0) {
+                elements.channelListContainer.innerHTML = `<div class="p-4 text-center text-text-dark">Nenhum canal nesta categoria.</div>`;
+                return;
+            }
+
+            channels.forEach((channel, index) => {
+                const item = document.createElement('div');
+                item.className = 'channel-item transition duration-200';
+                item.setAttribute('data-channel-index', index);
+                item.setAttribute('data-channel-url', channel.url);
+                item.setAttribute('data-channel-num', channel.num);
+                item.innerHTML = `<span class="channel-number">${channel.num}</span><span class="channel-name">${channel.name}</span>`;
+                
+                // Clicar no canal já entra no modo Fullscreen
+                item.addEventListener('click', () => {
+                    selectChannel(channel); // Passa o objeto de dados, não o elemento
+                    toggleFullPlayerMode(true);
+                });
+                
+                elements.channelListContainer.appendChild(item);
+                elements.channels.push(item);
+            });
+            
+            // Tenta manter o foco no primeiro item se estivermos na seção de canais
+            if (currentSection === 'channels' && elements.channels.length > 0) {
+                 focusedIndex = 0; // Garante que o foco vá para o topo da nova lista
+                 updateFocus();
+            }
+        }
+        
+        /**
+         * Seleciona e reproduz um canal
+         * Aceita um objeto de dados de canal ou um elemento HTML (para navegação por setas)
+         */
+        function selectChannel(dataOrElement) {
+            let num, name, url;
+
+            if (dataOrElement instanceof HTMLElement) {
+                // Se for um elemento HTML (vindo do Enter)
+                num = dataOrElement.getAttribute('data-channel-num');
+                name = dataOrElement.querySelector('.channel-name')?.textContent || '';
+                url = dataOrElement.getAttribute('data-channel-url');
+            } else if (typeof dataOrElement === 'object' && dataOrElement !== null) {
+                // Se for um objeto de dados (vindo do init ou clique)
+                ({ num, name, url } = dataOrElement);
+            } else {
+                console.error("Dados de canal inválidos fornecidos.");
+                return;
+            }
+
+            currentChannel = { num, name, url };
+
+            // 1. Atualiza Player UI
+            elements.playerInfoDisplay.querySelector('span').textContent = `${num} ${name} - AO VIVO`;
+            elements.playerTitle.textContent = `${name} - Clique para Fullscreen`;
+
+            // 2. Tenta carregar o vídeo
+            if (url && url.startsWith('http')) {
+                elements.playerMessage.textContent = 'Carregando canal...';
+                elements.playerMessage.classList.remove('hidden');
+                elements.videoPlayer.src = url;
+                elements.videoPlayer.load();
+
+                elements.playPauseBtn.classList.replace('fa-play', 'fa-pause');
+                
+                // 3. Tenta reproduzir e lida com o AbortError
+                startPlayback(elements.videoPlayer).then(() => {
+                    elements.playerMessage.classList.add('hidden');
+                }).catch(() => {
+                    elements.playerMessage.textContent = 'Erro ao reproduzir. Tente Enter.';
+                });
+            } else {
+                elements.playerMessage.textContent = `Canal ${name} indisponível.`;
+                elements.playerMessage.classList.remove('hidden');
+                elements.videoPlayer.src = ''; // Limpa o player
+                elements.videoPlayer.load();
+                console.error(`URL vazia ou inválida para o canal ${name}`);
+            }
+        }
+
+        // --- Funções de Foco (Navigation e Rolagem) ---
+
+        /**
+         * Aplica o foco visual ao elemento baseado na seção e no índice
+         */
+        function updateFocus() {
+            // 1. Limpa o foco de todos os elementos
+            document.querySelectorAll('.focus').forEach(el => el.classList.remove('focus'));
+            
+            let elementsToFocus = [];
+            let focusedElement = null;
+
+            if (currentSection === 'categories') {
+                elementsToFocus = elements.categories;
+            } else if (currentSection === 'channels') {
+                elementsToFocus = elements.channels;
+            } else if (currentSection === 'player') {
+                // Foco no player (seção)
+                elements.playerContainer.classList.add('focus');
+                elements.playerContainer.classList.add('player-controls-visible');
+                return;
+            }
+            
+            // Remove o foco do player se não estiver na seção 'player'
+            elements.playerContainer.classList.remove('focus');
+            elements.playerContainer.classList.remove('player-controls-visible');
+
+
+            // 2. Aplica o foco ao elemento atual
+            if (elementsToFocus.length > 0) {
+                // Garante que o índice esteja dentro dos limites
+                focusedIndex = Math.max(0, Math.min(focusedIndex, elementsToFocus.length - 1));
+                focusedElement = elementsToFocus[focusedIndex];
+                
+                if (focusedElement) {
+                    focusedElement.classList.add('focus');
+                    
+                    // ROLAGEM AUTOMÁTICA (essencial para TV)
+                    focusedElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    
+                    // Se a categoria muda, atualiza a lista de canais (sem mudar de seção)
+                    if (currentSection === 'categories') {
+                        const categoryName = focusedElement.getAttribute('data-category');
+                        renderChannels(categoryName);
+                    }
+                }
+            }
+        }
+
+        // --- Lógica de Reprodução ---
+
+        async function startPlayback(videoElement) {
+            return new Promise((resolve, reject) => {
+                setTimeout(async () => {
+                    try {
+                        // Desmuta o vídeo para iniciar a reprodução com o som
+                        videoElement.muted = false; 
+                        await videoElement.play();
+                        resolve();
+                    } catch (error) {
+                        if (error.name === "AbortError" || error.name === "NotAllowedError") {
+                            console.warn("Reprodução automática bloqueada ou abortada. Aguardando Enter.");
+                            // Se o autoplay falhar, muta e tenta de novo (sem som)
+                            videoElement.muted = true;
+                            videoElement.play().catch(e => console.error("Falha ao tentar reproduzir mesmo mutado:", e));
+                            reject(error);
+                        } else {
+                            console.error("Erro inesperado ao tentar reproduzir:", error);
+                            reject(error);
+                        }
+                    }
+                }, 100);
+            });
+        }
+        
+        // --- Handlers de Eventos de Teclado (Navegação TV) ---
+
+        document.addEventListener('keydown', (e) => {
+            const isCategorySection = currentSection === 'categories';
+            const isChannelSection = currentSection === 'channels';
+            
+            if (isFullPlayerMode) {
+                // Sai do modo Full Player ao pressionar ESC ou Voltar (Left)
+                if (e.key === 'Escape' || e.key === 'Backspace' || e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    toggleFullPlayerMode(false);
+                }
+                // Tecla ENTER simula o Play/Pause (no modo Full)
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    elements.playPauseBtn.click();
+                }
+                return;
+            }
+
+            let handled = true;
+
+            switch (e.key) {
+                case 'ArrowUp':
+                    focusedIndex = Math.max(0, focusedIndex - 1);
+                    break;
+                case 'ArrowDown':
+                    const maxIndex = isCategorySection ? elements.categories.length - 1 : elements.channels.length - 1;
+                    focusedIndex = Math.min(maxIndex, focusedIndex + 1);
+                    break;
+                case 'ArrowLeft':
+                    if (isChannelSection) {
+                        setCurrentSection('categories');
+                    } else if (currentSection === 'player') {
+                        setCurrentSection('channels');
+                    } else {
+                        handled = false;
+                    }
+                    break;
+                case 'ArrowRight':
+                    if (isCategorySection && elements.channels.length > 0) {
+                        setCurrentSection('channels');
+                    } else if (isChannelSection) {
+                        setCurrentSection('player');
+                    } else {
+                        handled = false;
+                    }
+                    break;
+                case 'Enter':
+                    if (isChannelSection && elements.channels[focusedIndex]) {
+                        // Seleciona o canal e entra em Full Screen
+                        const channelElement = elements.channels[focusedIndex];
+                        const channelData = {
+                            num: channelElement.getAttribute('data-channel-num'),
+                            name: channelElement.querySelector('.channel-name').textContent,
+                            url: channelElement.getAttribute('data-channel-url'),
+                        };
+                        selectChannel(channelData);
+                        toggleFullPlayerMode(true);
+                        handled = true;
+                    } else if (currentSection === 'player') {
+                        // Tenta dar Play/Pause se o foco estiver no Player
+                        elements.playPauseBtn.click();
+                        handled = true;
+                    } else {
+                        handled = false;
+                    }
+                    break;
+                default:
+                    handled = false;
+            }
+
+            if (handled) {
+                e.preventDefault();
+                updateFocus();
+            }
+        });
+
+        // --- Inicialização ---
+
+        function init() {
+            // 1. Coleta elementos de categoria
+            elements.categories = Array.from(document.querySelectorAll('.category-item'));
+            
+            // 2. Event Listeners para Fullscreen (clique no vídeo/título)
+            const fullscreenElements = [
+                elements.playerContainer, // Clicar no video-player
+                document.getElementById('fullscreen-btn'), // Botão fullscreen
+                elements.playerTitle.closest('[data-action="fullscreen"]'), // Título do canal no player
+            ];
+
+            fullscreenElements.forEach(el => {
+                el.addEventListener('click', (e) => {
+                    // Previne o clique de interferir no play/pause
+                    if (e.target.closest('.controls-row')) return; 
+                    toggleFullPlayerMode(true);
+                });
+            });
+            
+            // 3. Inicializa o estado
+            // Define o canal inicial no player passando os dados, não o elemento de categoria.
+            const initialChannelData = MOCK_CHANNELS["ESPORTES"][0];
+            selectChannel(initialChannelData); 
+            
+            // Renderiza a lista inicial (ESPORTES) e define o foco inicial
+            const initialCategoryName = elements.categories[0].getAttribute('data-category');
+            renderChannels(initialCategoryName);
+            
+            setCurrentSection('categories');
+
+            // 4. Configura Listeners de Play/Pause
+            elements.playPauseBtn.addEventListener('click', async () => {
+                if (elements.videoPlayer.paused || elements.videoPlayer.ended) {
+                    elements.videoPlayer.play().catch(e => console.error("Falha ao tentar reproduzir:", e));
+                    elements.playPauseBtn.classList.replace('fa-play', 'fa-pause');
+                } else {
+                    elements.videoPlayer.pause();
+                    elements.playPauseBtn.classList.replace('fa-pause', 'fa-play');
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
 </body>
 </html>
