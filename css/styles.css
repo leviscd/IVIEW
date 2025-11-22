@@ -1,198 +1,329 @@
-/* ---------------------------------------------------------
-   IPVIEW — Interface Futurista + Eye Animation
-   Autor: Levi
----------------------------------------------------------- */
-
-/* ---------- ROOT COLORS ---------- */
+/* --- Variáveis de Cores --- */
 :root {
-    --bg: #0a0f1a;
-    --bg-soft: #111827;
-    --card: #1e293b;
-    --text: #e2e8f0;
-    --primary: #8b5cf6;
-    --secondary: #00eaff;
-    --focus: #c4b5fd;
-    --neon: 0 0 12px rgba(139, 92, 246, 0.8);
+    --dark-bg: #05030F; /* Preto Quase Púrpura */
+    --dark-secondary: #100C21; /* Fundo da sidebar/cards */
+    --violet: #A352F9; /* Violeta Neon Principal */
+    --violet-glow: #E0CCFF; /* Glow/Foco */
+    --white: #FFFFFF;
+    --light-grey: #BBBBBB;
+    --alert: #FF6347;
+    --success: #32CD32;
 }
 
-/* ---------- GLOBAL ---------- */
-body {
+/* --- Base e Estrutura --- */
+* {
     margin: 0;
-    font-family: "Inter", sans-serif;
-    background: var(--bg);
-    color: var(--text);
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    /* Suaviza as transições de foco */
+    transition: all 0.2s ease-in-out, box-shadow 0.2s ease-in-out; 
+}
+
+body {
+    background-color: var(--dark-bg);
+    color: var(--white);
+    overflow: hidden; /* Evita barras de rolagem desnecessárias */
+    height: 100vh;
+    width: 100vw;
     display: flex;
-    min-height: 100vh;
+}
+
+/* --- Interface Principal --- */
+#main-interface {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+/* --- SIDEBAR --- */
+#sidebar {
+    width: 18%; /* 18% da largura da tela */
+    background-color: var(--dark-secondary);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 1rem;
+    border-right: 1px solid rgba(163, 82, 249, 0.1);
 }
 
-/* ---------- SCROLLBAR HIDDEN ---------- */
-.hide-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
-.hide-scrollbar::-webkit-scrollbar {
-    display: none;
-}
-
-/* ---------- SMART TV FOCUS ---------- */
-.focusable:focus,
-.focusable.focused {
-    outline: none;
-    border-color: var(--focus) !important;
-    box-shadow: var(--neon);
-    transform: scale(1.07);
-    transition: 0.18s;
-    z-index: 20;
+.logo-text {
+    font-size: 45px;
+    font-weight: 900;
+    color: var(--violet);
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px var(--violet);
+    margin-top: 10px;
+    margin-bottom: 40px;
 }
 
-/* ---------- CARDS ---------- */
-.category-card,
+#categories-list {
+    flex-grow: 1;
+    width: 100%;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+/* Estilo para a barra de rolagem (futurista) */
+#categories-list::-webkit-scrollbar { width: 5px; }
+#categories-list::-webkit-scrollbar-thumb { background: var(--violet); border-radius: 5px; }
+#categories-list::-webkit-scrollbar-track { background: var(--dark-secondary); }
+
+
+.category-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px 5px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    color: var(--light-grey);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.category-item i {
+    font-size: 30px;
+    margin-bottom: 8px;
+    color: var(--light-grey);
+}
+
+.category-item span {
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+}
+
+/* Estilo para o item SELECIONADO (a categoria atual) */
+.category-item.selected {
+    background-color: rgba(163, 82, 249, 0.3);
+    color: var(--violet-glow);
+    border-left: 4px solid var(--violet);
+}
+.category-item.selected i {
+    color: var(--violet-glow);
+}
+
+/* Estilo para o item FOCADO (navegação D-Pad) */
+.category-item.focused {
+    background-color: rgba(163, 82, 249, 0.15);
+    color: var(--violet-glow);
+    /* Efeito Glow */
+    box-shadow: 0 0 15px rgba(163, 82, 249, 0.8);
+    transform: scale(1.05);
+}
+.category-item.focused i {
+    color: var(--violet-glow);
+}
+
+
+.bottom-menu {
+    margin-top: 30px;
+}
+.bottom-menu a {
+    display: block;
+    margin-top: 20px;
+    color: var(--violet);
+    font-size: 28px;
+    text-decoration: none;
+}
+.bottom-menu a.focused {
+    color: var(--violet-glow);
+    text-shadow: 0 0 8px var(--violet);
+}
+
+/* --- CONTENT AREA (GRADE DE CANAIS) --- */
+#content-area {
+    width: 82%;
+    padding: 30px 40px;
+    overflow-y: auto; /* Permite scroll na grade */
+}
+/* Estilo para a barra de rolagem da grade */
+#content-area::-webkit-scrollbar { width: 8px; }
+#content-area::-webkit-scrollbar-thumb { background: var(--violet); border-radius: 4px; }
+#content-area::-webkit-scrollbar-track { background: var(--dark-bg); }
+
+#category-title {
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--violet-glow);
+    margin-bottom: 30px;
+    border-bottom: 1px solid rgba(163, 82, 249, 0.3);
+    padding-bottom: 10px;
+}
+
+#channel-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 4 colunas */
+    gap: 30px;
+    padding-bottom: 100px;
+}
+
 .channel-card {
-    background: var(--card);
-    border: 2px solid transparent;
-    transition: 0.2s;
+    background-color: var(--dark-secondary);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #302A50;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    height: 180px;
+    display: flex;
+    flex-direction: column;
 }
 
-.category-card:hover,
-.channel-card:hover {
+.channel-card.focused {
+    /* Efeito de Foco na Grade */
+    border: 3px solid var(--violet);
+    box-shadow: 0 0 20px rgba(163, 82, 249, 1);
     transform: scale(1.03);
 }
 
-/* ---------- PLAYER VIEW ---------- */
-.player-view {
-    width: 100vw !important;
-    height: 100vh !important;
-    padding: 0 !important;
-    max-width: none !important;
+.channel-image-placeholder {
+    width: 100%;
+    height: 60%;
+    background-color: #302A50;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.channel-image-placeholder i {
+    font-size: 40px;
+    color: var(--violet-glow);
+    opacity: 0.6;
+}
+.channel-image-placeholder span {
+    color: var(--light-grey);
+    font-size: 10px;
+    margin-top: 5px;
 }
 
-/* ---------- VIDEO ---------- */
-#video-container {
-    position: relative;
+.channel-info {
+    padding: 10px;
+}
+.channel-name {
+    color: var(--white);
+    font-weight: bold;
+    font-size: 18px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.channel-description {
+    color: var(--light-grey);
+    font-size: 12px;
+    margin-top: 4px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+#no-channels {
+    color: var(--light-grey);
+    font-size: 24px;
+    text-align: center;
+    padding-top: 150px;
+}
+.hidden {
+    display: none !important;
+}
+
+/* --- PLAYER EM TELA CHEIA --- */
+#player-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
-    overflow: hidden;
+    background-color: var(--dark-bg);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.loading-screen {
+    width: 100%;
+    height: 100%;
+    background-color: #000000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 
+.ping-display {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: 24px;
+    color: var(--light-grey);
+    font-weight: bold;
+}
+.loading-text {
+    color: var(--violet-glow);
+    font-size: 40px;
+    font-weight: bold;
+    margin-top: 40px;
+    margin-bottom: 20px;
+}
+.progress-bar-container {
+    width: 60%;
+    height: 10px;
+    background-color: var(--dark-secondary);
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 30px;
+}
+.progress-bar {
+    height: 100%;
+    background-color: var(--violet);
+    transition: width 0.2s ease;
+}
+.hint-text {
+    color: var(--light-grey);
+    font-size: 18px;
+    margin-top: 10px;
+}
+.no-pause-hint {
+    color: var(--alert);
+    font-size: 18px;
+    font-weight: bold;
+    margin-top: 15px;
+}
+
+/* Player real (simulado com iframe/div no HTML puro) */
 #video-player {
     width: 100%;
     height: 100%;
-    background: black;
-    object-fit: cover;
+    position: absolute;
 }
 
-/* ---------- PLAYER CONTROLS ---------- */
-#player-controls {
-    transition: opacity 0.3s;
-}
-
-#player-info {
-    transition: opacity 0.3s;
-}
-
-/* ---------- LAG INDICATOR ---------- */
-#lag-indicator {
-    transition: opacity 0.3s;
-}
-
-/* ---------------------------------------------------------
-   EYE ANIMATION — IPVIEW SIGNATURE
----------------------------------------------------------- */
-
-.eye-wrapper {
-    width: 200px;
-    height: 200px;
-    margin: 0 auto;
-    position: relative;
-    animation: float 3s ease-in-out infinite;
-}
-
-.eye {
+.video-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
-    border-radius: 50%;
-    background: radial-gradient(circle, #1e2638, #0a0f1a 70%);
-    position: relative;
-    box-shadow: 0 0 25px rgba(0, 170, 255, 0.4);
-    overflow: hidden;
+    padding: 30px;
+    pointer-events: none; /* Permite interações por baixo se necessário */
 }
-
-/* Iris */
-.iris {
-    width: 55%;
-    height: 55%;
-    background: radial-gradient(circle, #00eaff, #0066ff);
-    border-radius: 50%;
+.overlay-text {
+    color: var(--white);
+    font-size: 28px;
+    font-weight: bold;
+    text-shadow: 1px 1px 3px black;
+}
+.overlay-hint {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    animation: eyeMove 8s infinite;
+    bottom: 20px;
+    right: 20px;
+    color: var(--light-grey);
+    font-size: 16px;
 }
-
-/* Pupila */
-.pupil {
-    width: 28%;
-    height: 28%;
-    background: black;
-    border-radius: 50%;
+.overlay-no-pause {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-}
-
-/* Pálpebra superior */
-.eyelid-top, .eyelid-bottom {
-    width: 100%;
-    height: 50%;
-    background: var(--bg);
-    position: absolute;
-    left: 0;
-    z-index: 5;
-    animation: blink 7s infinite;
-}
-
-.eyelid-top {
-    top: 0;
-    transform-origin: top;
-}
-
-.eyelid-bottom {
-    bottom: 0;
-    transform-origin: bottom;
-}
-
-/* ---------- ANIMATIONS ---------- */
-@keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-6px); }
-}
-
-@keyframes eyeMove {
-    0%   { transform: translate(-50%, -50%); }
-    20%  { transform: translate(-60%, -48%); }
-    40%  { transform: translate(-40%, -52%); }
-    60%  { transform: translate(-50%, -50%); }
-    80%  { transform: translate(-52%, -42%); }
-    100% { transform: translate(-50%, -50%); }
-}
-
-@keyframes blink {
-    0%, 92%, 100% { transform: scaleY(0); }
-    95% { transform: scaleY(1); }
-}
-
-/* ---------- POWERED BY LEVI ---------- */
-.powered {
-    text-align: center;
-    margin-top: 1rem;
-    font-size: 1.2rem;
-    letter-spacing: 2px;
-    opacity: 0.85;
-    color: var(--secondary);
-    text-shadow: 0 0 10px var(--secondary);
+    bottom: 50px;
+    right: 20px;
+    color: var(--alert);
+    font-size: 18px;
+    font-weight: bold;
 }
