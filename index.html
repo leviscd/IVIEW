@@ -1,953 +1,570 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IPVIEW - TV Express Style</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- HLS.js CDN (for playing M3U8 streams) -->
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.0"></script>
-    <!-- Inter Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --color-primary-dark: #0F071A;
-            --color-focus-glow: #9333EA;
-        }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>IPVIEW</title>
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--color-primary-dark);
-            color: #E5E7EB; /* Light gray text */
-            overflow: hidden; /* Prevent scrolling for full-screen feel */
-        }
+  <!-- Inter font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- HLS.js -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.0"></script>
 
-        /* Custom focus style (Smart TV feel) */
-        .focusable {
-            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease-in-out;
-            cursor: pointer;
-            outline: none !important;
-        }
+  <style>
+    :root{
+      --bg:#000000;
+      --violet-1:#6D28D9;
+      --violet-2:#9333EA;
+      --glass: rgba(255,255,255,0.03);
+      --muted: rgba(255,255,255,0.36);
+      --focus-glow: 0 18px 48px rgba(147,51,234,0.45);
+    }
+    html,body,#app{height:100%}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;color:#fff;background:var(--bg);-webkit-font-smoothing:antialiased}
 
-        .focusable.focused {
-            transform: scale(1.06);
-            box-shadow: 0 0 0 6px rgba(147, 51, 234, 0.5), /* Inner Glow */
-                        0 0 20px 0 var(--color-focus-glow); /* Outer Glow */
-            z-index: 10; /* Ensure focused item stays on top */
-        }
+    /* Animated abstract background */
+    .bg-abstract{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+    .blob{position:absolute;width:80vmax;height:80vmax;border-radius:50%;filter:blur(100px);mix-blend-mode:screen}
+    .b1{background:radial-gradient(circle at 30% 30%, rgba(109,40,217,0.22), transparent 30%);left:-30%;top:-20%}
+    .b2{background:radial-gradient(circle at 70% 70%, rgba(147,51,234,0.18), transparent 30%);right:-30%;bottom:-20%}
 
-        /* Player view specific styling */
-        #player-view {
-            transition: opacity 0.3s ease-in-out;
-        }
-        
-        /* Subtle Background Animation (Violet Pulse) */
-        .background-pulse {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -10;
-            background: radial-gradient(circle at 10% 10%, rgba(109, 40, 217, 0.1) 0%, transparent 20%),
-                        radial-gradient(circle at 90% 90%, rgba(147, 51, 234, 0.1) 0%, transparent 20%);
-            animation: pulse-bg 15s infinite alternate;
-        }
+    main{position:relative;z-index:10;min-height:100vh}
 
-        @keyframes pulse-bg {
-            from { transform: scale(1); opacity: 0.8; }
-            to { transform: scale(1.1); opacity: 1; }
-        }
+    /* Home / Eye centered */
+    .home-wrap{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:22px;text-align:center}
+    .logo-wrap{width:260px;height:260px;display:flex;align-items:center;justify-content:center}
+    .brand-title{font-weight:800;letter-spacing:6px;font-size:1.6rem;background:linear-gradient(90deg,var(--violet-1),var(--violet-2));-webkit-background-clip:text;background-clip:text;color:transparent}
 
-        /* Glassmorphism for the main button */
-        .glass-btn {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: background 0.2s;
-        }
-        .glass-btn:hover, .glass-btn.focused {
-            background: rgba(255, 255, 255, 0.2);
-        }
+    .logo-svg{width:100%;height:100%;filter:drop-shadow(0 30px 80px rgba(0,0,0,0.7))}
+    .iris{transition:transform 1.6s cubic-bezier(.2,.9,.3,1);transform-origin:center}
+    .pupil{transition:transform 1.6s cubic-bezier(.2,.9,.3,1);transform-origin:center;filter:drop-shadow(0 12px 30px rgba(147,51,234,0.28))}
 
-        /* Estilo para os controles na tela */
-        #on-screen-controls {
-            z-index: 55; /* Acima do footer */
-        }
-        #on-screen-controls button {
-            width: 50px;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+    .start-btn{position:relative;z-index:20;padding:14px 26px;border-radius:999px;background:linear-gradient(90deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.04);font-weight:700}
+    .home-footer{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);font-size:12px;color:var(--muted);z-index:20}
 
-    </style>
+    /* Screens */
+    .screen{position:fixed;inset:0;display:none;padding:22px;z-index:20}
+    .screen.active{display:block}
+
+    /* Categories grid (IPTV style) */
+    .categories-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;align-items:start}
+    @media (max-width:1280px){.categories-grid{grid-template-columns:repeat(4,1fr)}}
+    @media (max-width:1024px){.categories-grid{grid-template-columns:repeat(3,1fr)}}
+    @media (max-width:640px){.categories-grid{grid-template-columns:repeat(2,1fr)}}
+
+    .cat-card{background:var(--glass);border-radius:12px;padding:12px;display:flex;align-items:center;gap:12px;border:1px solid rgba(255,255,255,0.03);cursor:pointer}
+    .cat-symbol{width:56px;height:56px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(109,40,217,0.18),rgba(147,51,234,0.12));font-size:20px}
+    .cat-meta .cat-title{font-weight:700}
+    .cat-meta .cat-sub{color:var(--muted);font-size:13px}
+
+    /* Channels grid */
+    .channels-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+    @media (max-width:1280px){.channels-grid{grid-template-columns:repeat(3,1fr)}}
+    @media (max-width:1024px){.channels-grid{grid-template-columns:repeat(2,1fr)}}
+    @media (max-width:640px){.channels-grid{grid-template-columns:repeat(1,1fr)}}
+
+    .channel-card{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border-radius:10px;padding:10px;cursor:pointer;border:1px solid rgba(255,255,255,0.03)}
+    .channel-thumb{height:120px;border-radius:8px;background-size:cover;background-position:center;margin-bottom:10px}
+    .channel-name{font-weight:700}
+
+    /* Focus */
+    
+    .focusable:focus{outline:none}
+    .focused{transform:scale(1.06);box-shadow:var(--focus-glow);transition:all .22s}
+
+    /* Player fullscreen (true fullscreen) */
+    #player-screen{position:fixed;inset:0;background:#000;display:none;z-index:9999}
+    #player-screen.active{display:block}
+    #player-screen-inner{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+    #video-player{width:100%;height:100%;object-fit:fill;background:#000}
+
+    .player-overlay{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;pointer-events:none}
+    .top-bar{padding:18px;display:flex;justify-content:space-between;align-items:center;pointer-events:auto}
+    .channel-info{background:linear-gradient(90deg,rgba(17,11,29,0.45),rgba(17,11,29,0.28));padding:10px 14px;border-radius:10px;font-weight:700}
+    #lag-indicator{padding:6px 10px;border-radius:8px;background:rgba(220,38,38,0.95);color:white;opacity:0;transition:opacity .25s}
+
+    /* bottom info bar (EPG-like) */
+    .bottom-bar{padding:12px 18px;display:flex;align-items:center;gap:12px;justify-content:space-between;pointer-events:auto}
+    .prog-title{font-weight:700}
+    .prog-sub{color:var(--muted);font-size:13px}
+    .progress-track{height:6px;background:rgba(255,255,255,0.04);border-radius:6px;flex:1;margin-left:14px;margin-right:14px;overflow:hidden}
+    .progress-fill{height:100%;width:40%;background:linear-gradient(90deg,var(--violet-1),var(--violet-2))}
+
+    /* hints */
+    .hints{position:absolute;left:18px;bottom:18px;background:linear-gradient(90deg,rgba(17,11,29,0.45),rgba(17,11,29,0.28));padding:8px 10px;border-radius:8px;font-size:13px;color:var(--muted);pointer-events:auto}
+
+    /* Loading overlay */
+    #loading-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;background:linear-gradient(180deg,rgba(0,0,0,0.65),rgba(0,0,0,0.35));backdrop-filter:blur(6px);z-index:10000;opacity:0;pointer-events:none;transition:opacity .32s}
+    #loading-overlay.visible{opacity:1;pointer-events:auto}
+    .spinner{width:84px;height:84px;border-radius:999px;border:6px solid rgba(255,255,255,0.06);border-top-color:var(--violet-1);animation:spin 1.1s linear infinite;box-shadow:0 12px 40px rgba(109,40,217,0.15)}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loading-text{font-weight:700;letter-spacing:1px;color:white}
+    .loading-sub{color:var(--muted);font-size:13px}
+
+    /* ping badge (only during loading) */
+    #ping-badge{position:absolute;top:18px;right:18px;background:rgba(255,255,255,0.04);padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);font-weight:700;opacity:0;transition:opacity .2s;pointer-events:none}
+
+    /* overlay elements hidden by default in fullscreen */
+    .channel-info, .bottom-bar, #lag-indicator, #player-log{opacity:0;pointer-events:none;transition:opacity .25s}
+
+    /* when overlay is visible */
+    .overlay-visible .channel-info, .overlay-visible .bottom-bar, .overlay-visible #ping-badge, .overlay-visible #lag-indicator, .overlay-visible #player-log{opacity:1;pointer-events:auto}
+
+
+    /* small responsive tweaks */
+    @media (max-width:640px){ .brand-title{font-size:1.2rem;letter-spacing:4px} .logo-wrap{width:180px;height:180px} .spinner{width:64px;height:64px} .categories-grid{grid-template-columns:repeat(2,1fr)} .channels-grid{grid-template-columns:repeat(1,1fr)} }
+  </style>
 </head>
 <body>
-    <!-- Background Effect -->
-    <div class="background-pulse"></div>
-
-    <!-- Main Application Container -->
-    <div id="app-container" class="min-h-screen w-full relative p-4 lg:p-8">
-
-        <!-- Home View (Logo + Main Button) -->
-        <div id="home-view" class="flex flex-col items-center justify-center min-h-screen">
-            <div id="eye-logo" class="mb-10 w-48 h-48 lg:w-64 lg:h-64 relative">
-                <!-- SVG Eye (Minimalistic, ready for JS animation) -->
-                <svg viewBox="0 0 100 100" class="w-full h-full text-violet-400 fill-current" preserveAspectRatio="xMidYMid meet">
-                    <!-- Outer Shape (Eye Ball) -->
-                    <circle cx="50" cy="50" r="45" stroke="#9333EA" stroke-width="2" fill="none" opacity="0.8"/>
-                    <!-- Pupil (Animated) -->
-                    <circle id="pupil" cx="50" cy="50" r="15" fill="#6D28D9" class="transition-all duration-500 ease-in-out"/>
-                    <!-- Glare / Highlight (Static) -->
-                    <circle cx="58" cy="42" r="4" fill="white" opacity="0.6"/>
-                    <!-- Eyelid Overlay (Animated for Blinking) -->
-                    <path id="eyelid-overlay" d="M 0 0 L 100 0 L 100 0 C 75 25, 25 25, 0 0 Z" fill="var(--color-primary-dark)" class="origin-top transition-transform duration-100"/>
-                </svg>
-            </div>
-            <h1 class="text-5xl lg:text-7xl font-extrabold mb-8" style="background-image: linear-gradient(to right, #6D28D9, #9333EA); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                IPVIEW
-            </h1>
-            <button id="main-btn-watch" data-action="categories" tabindex="0" class="focusable glass-btn py-4 px-12 text-lg lg:text-xl font-semibold rounded-xl tracking-wider uppercase">
-                ASSISTIR TV AO VIVO
-            </button>
-        </div>
-
-        <!-- Categories and Channels View Container -->
-        <div id="content-view" class="hidden w-full h-full">
-            
-            <!-- Top Bar (Header) -->
-            <header class="flex justify-between items-center h-16 mb-4 lg:mb-8">
-                <div class="flex items-center space-x-2">
-                    <svg viewBox="0 0 100 100" class="w-8 h-8 text-violet-400 fill-current" preserveAspectRatio="xMidYMid meet">
-                        <circle cx="50" cy="50" r="45" stroke="#9333EA" stroke-width="2" fill="none" opacity="0.8"/>
-                        <circle cx="50" cy="50" r="15" fill="#6D28D9"/>
-                    </svg>
-                    <span class="text-xl font-bold">IPVIEW</span>
-                </div>
-                <div class="text-lg font-semibold text-violet-300">
-                    <span id="current-view-title"></span>
-                </div>
-            </header>
-
-            <div class="flex h-[calc(100vh-8rem)]"> <!-- Altura ajustada para responsividade -->
-                <!-- Main Grid Area -->
-                <main id="grid-area" class="w-full lg:w-3/4 pr-0 lg:pr-8 overflow-y-auto custom-scrollbar">
-                    <!-- Content (Categories or Channels) rendered here -->
-                </main>
-
-                <!-- Info Banner (Desktop/TV Only) -->
-                <aside id="info-banner" class="hidden lg:block lg:w-1/4 p-4 rounded-xl shadow-lg bg-gray-800/30 border border-gray-700/50">
-                    <div class="flex flex-col h-full text-gray-300">
-                        <h3 class="text-2xl font-bold text-violet-300 mb-4">Informação do Canal</h3>
-                        <div id="banner-placeholder-image" class="w-full h-auto bg-gray-700 rounded-lg mb-4 aspect-video flex items-center justify-center">
-                            <span class="text-sm">Mini-Poster / Placeholder</span>
-                        </div>
-                        <p id="banner-channel-name" class="text-xl font-semibold text-white mb-2">Canal Selecionado</p>
-                        <p id="banner-program-title" class="text-lg text-violet-200 mb-1">Programa Atual: Sem dados de EPG</p>
-                        <p id="banner-program-time" class="text-sm text-gray-400">Tempo restante: 30 minutos (Fictício)</p>
-                        <p id="banner-channel-desc" class="mt-4 text-sm text-gray-400 italic">
-                            Use as setas para navegar e ENTER para abrir o player.
-                        </p>
-                    </div>
-                </aside>
-            </div>
-        </div>
-        
-        <!-- Player View (Full screen overlay) -->
-        <div id="player-view" class="fixed inset-0 bg-black hidden flex-col items-center justify-center" style="z-index: 100;">
-            <div id="lag-indicator" class="hidden absolute top-4 right-4 bg-red-700 text-white px-3 py-1 rounded-full text-sm font-bold z-110">
-                <svg class="w-4 h-4 inline-block mr-1 align-text-bottom" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
-                LAG/ERRO
-            </div>
-            <video id="video-player" class="w-full h-full object-contain" autoplay muted playsinline></video>
-            
-            <!-- Overlay para bloquear clique/pause no vídeo -->
-            <div id="video-click-blocker" class="absolute inset-0 z-[101]"></div>
-
-            <!-- Overlay de Informação do Canal (Auto-hide) -->
-            <div id="player-channel-info-overlay" class="absolute top-4 left-4 bg-black/70 p-4 rounded-lg shadow-lg z-[105] transition-opacity duration-500 opacity-0 hidden">
-                <span id="player-info-number" class="block text-5xl font-extrabold text-violet-300"></span>
-                <span id="player-info-name" class="block text-3xl font-semibold text-white"></span>
-            </div>
-
-            <!-- Player Info Bar (Auto-hide manual) -->
-            <div id="player-controls-bar" class="absolute top-0 left-0 w-full p-4 bg-black/60 transition-opacity duration-500 z-[102]" style="opacity: 0;">
-                <div class="flex justify-between items-center">
-                    <span id="player-channel-name" class="text-3xl font-bold text-white"></span>
-                    <span class="text-lg text-gray-400">Pressione SPACE ou ENTER para mostrar/ocultar barra</span>
-                </div>
-            </div>
-
-            <!-- Fullscreen Button (for non-TV environments) -->
-            <button id="fullscreen-btn" class="absolute bottom-4 right-4 bg-violet-600 hover:bg-violet-700 text-white p-3 rounded-full shadow-lg focusable z-[102]" onclick="toggleFullscreen()">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5m0 11v-4m0 4h-4m4 0l-5-5m-11 5h4m-4 0v-4m0 4l5-5"></path></svg>
-            </button>
-        </div>
-
-        <!-- Numeric Input Overlay -->
-        <div id="numeric-overlay" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/80 text-white text-7xl font-bold p-8 rounded-xl hidden z-[120]">
-            0
-        </div>
-
-        <!-- "ASSISTIR" Button for Mobile/Tablet Fixed at Bottom -->
-        <button id="mobile-assistir-btn" data-action="categories" tabindex="0" class="focusable glass-btn py-3 px-8 text-base font-semibold rounded-xl tracking-wider uppercase fixed bottom-4 left-4 right-4 z-50 lg:hidden">
-            ASSISTIR TV AO VIVO
-        </button>
-        
-        <!-- Vertical Button for Desktop/TV Fixed at Left -->
-        <button id="desktop-assistir-btn" data-action="categories" tabindex="0" class="focusable glass-btn py-3 px-8 text-base font-semibold rounded-xl tracking-wider uppercase fixed top-1/2 left-[-30px] transform -translate-y-1/2 rotate-90 z-50 hidden lg:block">
-            ASSISTIR TV AO VIVO
-        </button>
-
-        <!-- Controles de Navegação On-Screen (Setas) -->
-        <div id="on-screen-controls" class="fixed bottom-4 right-4 grid grid-cols-3 gap-2 p-3 bg-black/30 backdrop-blur-sm rounded-xl">
-            <div></div> <!-- Célula vazia -->
-            <button id="nav-up" class="glass-btn rounded-lg text-white" onclick="triggerKey('ArrowUp')">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
-            </button>
-            <div></div> <!-- Célula vazia -->
-            <button id="nav-left" class="glass-btn rounded-lg text-white" onclick="triggerKey('ArrowLeft')">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-            </button>
-            <button id="nav-ok" class="glass-btn rounded-lg text-white font-bold" onclick="triggerKey('Enter')">OK</button>
-            <button id="nav-right" class="glass-btn rounded-lg text-white" onclick="triggerKey('ArrowRight')">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-            </button>
-            <div></div> <!-- Célula vazia -->
-            <button id="nav-down" class="glass-btn rounded-lg text-white" onclick="triggerKey('ArrowDown')">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-            </button>
-            <div></div> <!-- Célula vazia -->
-        </div>
-
+  <div id="app">
+    <div class="bg-abstract" aria-hidden="true">
+      <div class="blob b1"></div>
+      <div class="blob b2"></div>
     </div>
-    
-    <!-- Footer -->
-    <footer class="fixed bottom-0 left-0 w-full text-center py-2 text-xs text-gray-500 bg-gray-900/10 z-50">
-        Powered by Levi
-    </footer>
 
-    <script type="text/javascript">
-        // --- CONFIGURAÇÃO INICIAL E DADOS ---
+    <main>
+      <!-- HOME -->
+      <section id="home-screen" class="home-wrap screen active" aria-hidden="false">
+        <div class="logo-wrap" id="eye-container">
+          <svg class="logo-svg" viewBox="0 0 240 240" aria-label="IPVIEW logo" role="img">
+            <defs>
+              <radialGradient id="irisGrad" cx="35%" cy="30%">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.06"/>
+                <stop offset="25%" stop-color="#7c3aed"/>
+                <stop offset="100%" stop-color="#3b0766"/>
+              </radialGradient>
+            </defs>
+            <g transform="translate(120,120)">
+              <path d="M-100,0 C-60,-68 60,-68 100,0 C60,68 -60,68 -100,0 Z" fill="rgba(255,255,255,0.02)" />
+              <circle class="iris" r="46" fill="url(#irisGrad)" />
+              <g class="pupil" id="pupilGroup"><circle r="18" fill="#050003"/><circle r="7" fill="#fff" opacity="0.06" transform="translate(-5,-5)"/></g>
+              <path d="M-40,-18 C-10,-40 30,-32 54,-16 C36,-8 10,2 -20,6 C-36,4 -52,-2 -40,-18 Z" fill="#fff" opacity="0.06" />
+            </g>
+          </svg>
+        </div>
 
-        // Variáveis globais obrigatórias (não utilizadas no front-end, mas exigidas pelo ambiente)
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        <div class="brand-title">IPVIEW</div>
 
-        const CHANNEL_DATA = {
-            "esportes": [
-                { "nome": "Premiere 1", "url": "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/d485d118d525ae4326aa31371f5dfcef/premiere.m3u8" },
-                { "nome": "Premiere 2", "url": "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/aa1f6257eeb308e3e6677bae5fb7f1c8/premiere2.m3u8" }
-            ],
-            "noticias": [
-                { "nome": "Record News", "url": "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/3728ae10c1a4f5b4a394d9771ec12db2/record.m3u8" }
-            ],
-            "infantil": [
-                { "nome": "Cartoon Network", "url": "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/f67e159151a581847c31a461034c795a/cartoonnetwork.m3u8" },
-                { "nome": "Nickelodeon", "url": "https://d1muf25xa11soq8hp22.s27-usa-cloudfront-net.online/token/528246d1903b4743bca33088eedc800f/nickelodeon.m3u8" }
-            ],
-            "filmes_e_series": [
-                { "nome": "Telecine Premium", "url": "https://placehold.co/400x225/ba55d3/ffffff?text=Telecine" },
-                { "nome": "HBO HD", "url": "https://placehold.co/400x225/4b0082/ffffff?text=HBO" }
-            ],
-            "variedades": [
-                { "nome": "Multishow", "url": "https://placehold.co/400x225/daa520/000000?text=Multi" },
-                { "nome": "GNT", "url": "https://placehold.co/400x225/808080/ffffff?text=GNT" }
-            ]
-        };
+        <button id="start-btn" class="start-btn focusable" aria-label="Assistir TV ao vivo">ASSISTIR TV AO VIVO</button>
 
-        // Estado Global da Aplicação
-        let currentView = 'home';
-        let viewHistory = []; // Para navegação Backspace/Escape
-        let focusElement = null;
-        let numericInput = '';
-        let numericTimeout = null;
-        let autoHideTimer = null;
-        let channelInfoTimeout = null; // Timer para o overlay de info do canal
-        let hlsPlayer = null;
-        let currentChannelObject = null;
-        const allChannels = [];
+        <div id="home-powered" class="home-footer">Powered by Levi</div>
+      </section>
 
-        // Mapeamento e indexação de todos os canais para troca rápida (TV Express style)
-        let globalIndex = 1;
-        for (const categoryKey in CHANNEL_DATA) {
-            CHANNEL_DATA[categoryKey].forEach(channel => {
-                channel.globalIndex = globalIndex++;
-                channel.categoryKey = categoryKey;
-                channel.categoryName = categoryKey.replace(/_/g, ' ').toUpperCase();
-                allChannels.push(channel);
-            });
+      <!-- CATEGORIES -->
+      <section id="categories-screen" class="screen" aria-hidden="true">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 class="text-3xl font-extrabold">Categorias</h2>
+            <p class="text-sm text-[rgba(255,255,255,0.36)]">Use as setas para navegar — Enter para abrir</p>
+          </div>
+          <div>
+            <button id="cat-back" class="start-btn focusable">← Voltar</button>
+          </div>
+        </div>
+        <div id="categories-grid" class="categories-grid" role="list"></div>
+      </section>
+
+      <!-- CHANNELS -->
+      <section id="channels-screen" class="screen" aria-hidden="true">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 id="channels-title" class="text-2xl font-bold"></h2>
+          </div>
+          <div>
+            <button id="chan-back" class="start-btn focusable">← Categorias</button>
+          </div>
+        </div>
+        <div id="channels-grid" class="channels-grid" role="list"></div>
+      </section>
+
+      <!-- PLAYER -->
+      <section id="player-screen" class="screen" aria-hidden="true">
+        <div id="player-screen-inner">
+          <video id="video-player" playsinline webkit-playsinline muted></video>
+
+          <div id="ping-badge" aria-hidden="true">Ping: — ms</div>
+
+          <div class="player-overlay">
+            <div class="top-bar">
+              <div id="channel-info" class="channel-info">—</div>
+              <div id="lag-indicator">LAG</div>
+            </div>
+
+            <div class="bottom-bar">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div class="prog-title" id="prog-title">Ao Vivo</div>
+                <div class="prog-sub" id="prog-sub">Sem dados EPG</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:12px;width:60%;">
+                <div class="progress-track"><div class="progress-fill" id="prog-fill"></div></div>
+                <div class="prog-time" id="prog-time">00:00</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Loading overlay -->
+          <div id="loading-overlay">
+            <div class="spinner" aria-hidden="true"></div>
+            <div class="loading-text" id="loading-text">CARREGANDO…</div>
+            <div class="loading-sub" id="loading-sub">Aguarde enquanto o canal é preparado</div>
+          </div>
+
+          <div class="hints">←/→ trocar • ↑ voltar • ↓ info/desmutar • F favorita</div>
+
+          <!-- Error log (visible small console) -->
+          <div id="player-log" style="display:none;position:absolute;left:18px;bottom:72px;background:rgba(0,0,0,0.55);padding:8px 10px;border-radius:8px;font-size:12px;color:rgba(255,255,255,0.85);max-width:40%;opacity:0.95">Pronto</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // CHANNEL_DATA (exact as provided by user)
+    const CHANNEL_DATA = {
+        "esportes": [
+            { "nome": "Premiere 1", "url": "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/d485d118d525ae4326aa31371f5dfcef/premiere.m3u8" },
+            { "nome": "Premiere 2", "url": "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/aa1f6257eeb308e3e6677bae5fb7f1c8/premiere2.m3u8" }
+        ],
+        "noticias": [
+            { "nome": "Record News", "url": "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/3728ae10c1a4f5b4a394d9771ec12db2/record.m3u8" }
+        ],
+        "infantil": [
+            { "nome": "Cartoon Network", "url": "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/f67e159151a581847c31a461034c795a/cartoonnetwork.m3u8" },
+            { "nome": "Nickelodeon", "url": "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/528246d1903b4743bca33088eedc800f/nickelodeon.m3u8" }
+        ],
+        "filmes_e_series": [
+            { "nome": "Telecine Premium", "url": "https://placehold.co/400x225/ba55d3/ffffff?text=Telecine" },
+            { "nome": "HBO HD", "url": "https://placehold.co/400x225/4b0082/ffffff?text=HBO" }
+        ],
+        "variedades": [
+            { "nome": "Multishow", "url": "https://placehold.co/400x225/daa520/000000?text=Multi" },
+            { "nome": "GNT", "url": "https://placehold.co/400x225/808080/ffffff?text=GNT" }
+        ]
+    };
+
+    // State
+    const state = {
+      view: 'home', // home | categories | channels | player
+      currentCategory: null,
+      channelIndex: 0,
+      hls: null,
+      focusables: [],
+      focusIndex: 0,
+      favorites: {},
+      _overlayTimer: null,
+      _progInterval: null
+    };
+
+    // Refs
+    const REFS = {
+      home: document.getElementById('home-screen'),
+      startBtn: document.getElementById('start-btn'),
+      homePowered: document.getElementById('home-powered'),
+      categories: document.getElementById('categories-screen'),
+      categoriesGrid: document.getElementById('categories-grid'),
+      catBack: document.getElementById('cat-back'),
+      channels: document.getElementById('channels-screen'),
+      channelsGrid: document.getElementById('channels-grid'),
+      channelsTitle: document.getElementById('channels-title'),
+      chanBack: document.getElementById('chan-back'),
+      playerScreen: document.getElementById('player-screen'),
+      playerInner: document.getElementById('player-screen-inner'),
+      video: document.getElementById('video-player'),
+      channelInfo: document.getElementById('channel-info'),
+      lag: document.getElementById('lag-indicator'),
+      loadingOverlay: document.getElementById('loading-overlay'),
+      loadingText: document.getElementById('loading-text'),
+      loadingSub: document.getElementById('loading-sub'),
+      ping: document.getElementById('ping-badge'),
+      playerLog: document.getElementById('player-log'),
+      progFill: document.getElementById('prog-fill'),
+      progTime: document.getElementById('prog-time'),
+      progTitle: document.getElementById('prog-title'),
+      progSub: document.getElementById('prog-sub')
+    };
+
+    /* ---------- Utilities - Views ---------- */
+    function showView(name){
+      ['home-screen','categories-screen','channels-screen','player-screen'].forEach(id=>{
+        const el = document.getElementById(id);
+        if(!el) return;
+        el.classList.remove('active'); el.style.display = 'none'; el.setAttribute('aria-hidden','true');
+      });
+      const target = document.getElementById((name.endsWith('-screen')? name : name + '-screen'));
+      if(target){ target.classList.add('active'); target.style.display = 'block'; target.setAttribute('aria-hidden','false'); }
+      state.view = name.replace('-screen','');
+      REFS.homePowered.style.display = (name==='home' || name==='home-screen') ? 'block' : 'none';
+      rebuildFocusables();
+    }
+
+    /* ---------- Focusables Helpers ---------- */
+    function rebuildFocusables(){
+      // include only visible .focusable elements and ensure tabindex is present
+      state.focusables = Array.from(document.querySelectorAll('.focusable')).filter(el => isVisible(el));
+      state.focusables.forEach(el=>{ if(!el.hasAttribute('tabindex')) el.setAttribute('tabindex','0'); });
+      if(state.focusables.length === 0) { state.focusIndex = 0; return; }
+      if(state.focusIndex >= state.focusables.length) state.focusIndex = 0;
+      applyFocus();
+    }
+    function isVisible(el){ return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length) && getComputedStyle(el).visibility !== 'hidden'; }
+    function applyFocus(){ document.querySelectorAll('.focused').forEach(x=>x.classList.remove('focused')); const el = state.focusables[state.focusIndex]; if(el){ el.classList.add('focused'); try{el.focus();}catch(e){} el.scrollIntoView({behavior:'smooth',block:'center',inline:'center'}); } }
+
+    // Grid-aware focus movement: left/right + up/down (uses computed columns of nearest grid)
+    function getGridColumns(container){ try{ const cs = getComputedStyle(container); const template = cs.gridTemplateColumns || ''; const cols = (template.match(/\bauto\b|\bminmax\b|[^\s]+/g) || template.split(' ').filter(Boolean)).length; return Math.max(1, cols); }catch(e){ return 1; } }
+    function focusMove(direction){
+      if(state.focusables.length===0) return;
+      // direction: 'left'|'right'|'up'|'down'|'next'|'prev'
+      const cur = state.focusIndex;
+      let next = cur;
+      if(direction === 'next' || direction === 'right') next = Math.min(state.focusables.length-1, cur + 1);
+      else if(direction === 'prev' || direction === 'left') next = Math.max(0, cur - 1);
+      else if(direction === 'up' || direction === 'down'){
+        // try to detect parent grid to compute columns
+        const el = state.focusables[cur];
+        const grid = el ? el.closest('.categories-grid, .channels-grid') : null;
+        const cols = grid ? getGridColumns(grid) : 4;
+        next = direction === 'up' ? Math.max(0, cur - cols) : Math.min(state.focusables.length-1, cur + cols);
+      }
+      state.focusIndex = next; applyFocus();
+    }
+
+    /* ---------- Category metadata ---------- */
+    const CAT_META = { esportes:{sym:'⚽',desc:'Esportes ao vivo'}, noticias:{sym:'📰',desc:'Notícias 24h'}, infantil:{sym:'🧸',desc:'Programação infantil'}, filmes_e_series:{sym:'🎬',desc:'Filmes e séries'}, variedades:{sym:'✨',desc:'Entretenimento'} };
+
+    /* ---------- Render categories & channels (fixed) ---------- */
+    function renderCategories(){
+      REFS.categoriesGrid.innerHTML = '';
+      Object.keys(CHANNEL_DATA).forEach(key => {
+        const meta = CAT_META[key] || {sym:'📺',desc:''};
+        const card = document.createElement('button');
+        card.className = 'focusable cat-card';
+        card.setAttribute('data-key', key);
+        card.setAttribute('role','button');
+        card.innerHTML = `<div class='cat-symbol'>${meta.sym}</div><div class='cat-meta'><div class='cat-title'>${key.replace(/_/g,' ').toUpperCase()}</div><div class='cat-sub'>${meta.desc}</div></div>`;
+        card.addEventListener('click', ()=> openChannels(key));
+        REFS.categoriesGrid.appendChild(card);
+      });
+      rebuildFocusables();
+    }
+
+    function openChannels(categoryKey){
+      state.currentCategory = categoryKey;
+      REFS.channelsTitle.textContent = categoryKey.replace(/_/g,' ').toUpperCase();
+      REFS.channelsGrid.innerHTML = '';
+      const list = CHANNEL_DATA[categoryKey] || [];
+      list.forEach((ch, idx)=>{
+        const card = document.createElement('button');
+        card.className = 'focusable channel-card';
+        card.setAttribute('data-idx', idx);
+        card.setAttribute('role','button');
+        const thumb = ch.url && ch.url.startsWith('https://placehold.co') ? ch.url : `https://placehold.co/600x340/0f0222/ffffff?text=${encodeURIComponent(ch.nome)}`;
+        card.innerHTML = `<div class='channel-thumb' style="background-image:url('${thumb}')"></div><div class='channel-name'>${ch.nome}</div>`;
+        card.addEventListener('click', ()=> openPlayer(idx));
+        REFS.channelsGrid.appendChild(card);
+      });
+      // Directly show channels view (avoid double show hack)
+      showView('channels');
+    }
+
+    /* ---------- PLAYER: loading UI + ping + HLS ---------- */
+    async function openPlayer(idx){
+      state.channelIndex = idx;
+      await playChannelAtIndex(idx);
+      // request fullscreen for immersive TV-like behavior (best-effort)
+      try{ if(document.fullscreenEnabled){ REFS.playerScreen.requestFullscreen().catch(()=>{}); } }catch(e){}
+      showView('player');
+    }
+
+    function log(msg){
+      console.log('[IPVIEW]', msg);
+      try{ if(REFS.playerLog) REFS.playerLog.style.display = 'none'; }catch(e){}
+    }
+
+    async function playChannelAtIndex(idx){
+      const list = CHANNEL_DATA[state.currentCategory] || [];
+      if(idx < 0 || idx >= list.length) return;
+      const ch = list[idx];
+      REFS.channelInfo.textContent = ch.nome || '—';
+
+      // prepare loading overlay
+      REFS.loadingOverlay.classList.add('visible');
+      REFS.loadingText.textContent = 'CARREGANDO…';
+      REFS.loadingSub.textContent = 'Aguarde enquanto o canal é preparado';
+      REFS.ping.textContent = 'Ping: — ms';
+      REFS.ping.style.opacity = 1; // show ping only during load
+      REFS.lag.style.opacity = 0;
+
+      const url = ch.url;
+      const video = REFS.video;
+
+      // cleanup previous HLS
+      try{ if(state.hls){ state.hls.destroy(); state.hls = null; } }catch(e){ }
+      video.removeAttribute('src'); video.load();
+
+      // measure ping (best-effort, tolerate CORS issues)
+      measurePing(url).then(ms=>{ REFS.ping.textContent = ms>0? `Ping: ${ms} ms` : 'Ping: -'; }).catch(()=>{ REFS.ping.textContent = 'Ping: -'; });
+
+      // configure video for autoplay compatibility
+      try{ video.crossOrigin = 'anonymous'; }catch(e){}
+      video.playsInline = true; video.muted = true; // keep muted to allow autoplay; user can unmute via ↓
+      video.removeAttribute('controls');
+
+      // show program UI quickly
+      REFS.progTitle.textContent = ch.nome;
+      REFS.progSub.textContent = 'Ao Vivo';
+      REFS.progTime.textContent = new Date().toLocaleTimeString();
+      REFS.progFill.style.width = '18%';
+
+      // HLS flow
+      if(window.Hls && Hls.isSupported() && typeof url === 'string' && url.endsWith('.m3u8')){
+        const hls = new Hls({maxBufferLength:30,maxMaxBufferLength:60,autoStartLoad:true});
+        state.hls = hls;
+        hls.attachMedia(video);
+
+        let manifestLoaded = false;
+        hls.on(Hls.Events.MEDIA_ATTACHED, ()=> { hls.loadSource(url); });
+
+        hls.on(Hls.Events.MANIFEST_PARSED, ()=>{
+          manifestLoaded = true;
+          video.play().then(()=>{
+            REFS.loadingText.textContent = 'CARREGADO';
+            setTimeout(()=>{
+              REFS.loadingOverlay.classList.remove('visible');
+              REFS.ping.style.opacity = 0;
+            }, 700);
+          }).catch(err=>{ log('play blocked: '+ err); REFS.loadingText.textContent = 'TENTANDO…'; });
+        });
+
+        hls.on(Hls.Events.ERROR, (event, data)=>{
+          log('HLS ERROR: ' + JSON.stringify(data));
+          REFS.lag.textContent = 'ERROR';
+          showPlayerOverlayTemp();
+          REFS.loadingText.textContent = 'ERRO AO CARREGAR';
+          // fallback to direct src
+          try{ video.src = url; video.load(); video.play().catch(()=>{}); }catch(e){}
+          REFS.ping.style.opacity = 0;
+        });
+
+        hls.on(Hls.Events.BUFFER_STALLED, ()=>{ REFS.lag.textContent = 'BUFFER STALLED'; REFS.loadingText.textContent = 'CARREGANDO…'; showPlayerOverlayTemp(); });
+        hls.on(Hls.Events.BUFFER_EMPTY, ()=>{ REFS.lag.textContent = 'BUFFER EMPTY'; REFS.loadingText.textContent = 'CARREGANDO…'; showPlayerOverlayTemp(); });
+        hls.on(Hls.Events.PLAYING, ()=>{ REFS.lag.style.opacity = 0; REFS.loadingText.textContent = 'CARREGADO'; setTimeout(()=> REFS.loadingOverlay.classList.remove('visible'), 700); REFS.ping.style.opacity = 0; });
+
+      } else {
+        // fallback to direct src (images/placeholders)
+        video.src = url;
+        video.load();
+        video.play().then(()=>{ REFS.loadingText.textContent = 'CARREGADO'; setTimeout(()=> REFS.loadingOverlay.classList.remove('visible'),700); REFS.ping.style.opacity = 0; }).catch(err=>{ log('play error: '+err); REFS.loadingText.textContent = 'ERRO AO CARREGAR'; REFS.ping.style.opacity = 0; });
+      }
+
+      // if paused by browser, try resume on key press; keep muted until user unmutes
+      video.onpause = ()=>{ if(state.view === 'player'){ setTimeout(()=>{ try{ video.play().catch(()=>{}); }catch(e){} },200); } };
+
+      // helper to show player overlay temporarily
+      function showPlayerOverlayTemp(){
+        try{
+          const container = document.getElementById('player-screen-inner');
+          container.classList.add('overlay-visible');
+          if(REFS.loadingOverlay.classList.contains('visible')) REFS.ping.style.opacity = 1;
+          clearTimeout(state._overlayTimer);
+          state._overlayTimer = setTimeout(hidePlayerOverlay, 3000);
+        }catch(e){}
+      }
+      function hidePlayerOverlay(){ try{ const container = document.getElementById('player-screen-inner'); container.classList.remove('overlay-visible'); REFS.ping.style.opacity = 0; }catch(e){} }
+      hidePlayerOverlay();
+
+      // when starting playback, ensure overlay is hidden
+      video.addEventListener('playing', ()=>{ REFS.loadingText.textContent = 'CARREGADO'; setTimeout(()=> REFS.loadingOverlay.classList.remove('visible'),700); REFS.ping.style.opacity = 0; setTimeout(()=> hidePlayerOverlay(), 800); });
+
+      // small updater for prog time/progress
+      try{ clearInterval(state._progInterval); }catch(e){}
+      state._progInterval = setInterval(()=>{
+        REFS.progTime.textContent = new Date().toLocaleTimeString();
+        const cur = parseFloat(REFS.progFill.style.width) || 0;
+        REFS.progFill.style.width = Math.min(100, cur + 0.15) + '%';
+      }, 3000);
+    }
+
+    // measure ping by fetching resource (best-effort, no strict reliance on CORS)
+    async function measurePing(url){
+      try{
+        const start = performance.now();
+        // try a small HEAD; may fail due to CORS — that's fine
+        await fetch(url, {method:'HEAD', mode:'no-cors'});
+        return Math.max(1, Math.round(performance.now()-start));
+      }catch(e){
+        try{
+          const start = performance.now();
+          await fetch('https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_92x30dp.png', {method:'HEAD', mode:'no-cors'});
+          return Math.max(10, Math.round(performance.now()-start));
+        }catch(err){
+          return -1;
         }
+      }
+    }
 
-        // --- FUNÇÕES DE UTILITY E FOCO ---
+    /* ---------- Channel navigation ---------- */
+    function prevChannel(){ const list = CHANNEL_DATA[state.currentCategory]||[]; state.channelIndex = (state.channelIndex -1 + list.length)%list.length; playChannelAtIndex(state.channelIndex); }
+    function nextChannel(){ const list = CHANNEL_DATA[state.currentCategory]||[]; state.channelIndex = (state.channelIndex +1)%list.length; playChannelAtIndex(state.channelIndex); }
+    function exitToChannels(){ try{ if(state.hls){ state.hls.destroy(); state.hls = null; } }catch(e){} try{ REFS.video.pause(); }catch(e){} REFS.video.removeAttribute('src'); REFS.video.load(); try{ document.exitFullscreen().catch(()=>{}); }catch(e){} showView('channels'); }
 
-        /** Define o elemento com foco (Smart TV feel). */
-        function setFocus(element) {
-            if (focusElement) {
-                focusElement.classList.remove('focused');
-                focusElement.blur();
-            }
-            if (element) {
-                element.classList.add('focused');
-                element.focus();
-                focusElement = element;
-                
-                // For channel cards, update the info banner
-                if (element.classList.contains('channel-card')) {
-                    updateInfoBanner(element.dataset.channelIndex);
-                } else if (currentView === 'channels') {
-                    // Hide banner content if focus leaves a channel card
-                    updateInfoBanner();
-                }
-            }
+    /* ---------- Keyboard handling (TV-style) ---------- */
+    window.addEventListener('keydown', (e)=>{
+      // when in player view
+      if(state.view === 'player'){
+        if(e.key === 'ArrowLeft'){ e.preventDefault(); prevChannel(); }
+        else if(e.key === 'ArrowRight'){ e.preventDefault(); nextChannel(); }
+        else if(e.key === 'ArrowUp'){ e.preventDefault(); exitToChannels(); }
+        else if(e.key === 'ArrowDown'){ e.preventDefault(); // toggle overlay info and unmute/mute
+          const vid = REFS.video;
+          vid.muted = !vid.muted;
+          const inner = REFS.playerInner;
+          if(vid.muted){ inner.classList.add('overlay-visible'); REFS.loadingText.textContent = 'MUTED'; }
+          else { inner.classList.add('overlay-visible'); REFS.loadingText.textContent = 'UNMUTED'; }
+          clearTimeout(state._overlayTimer);
+          state._overlayTimer = setTimeout(()=>{ inner.classList.remove('overlay-visible'); REFS.loadingText.textContent = ''; }, 900);
         }
-        
-        /** Atualiza o banner lateral com as informações do canal. */
-        function updateInfoBanner(globalIndex = null) {
-            const banner = document.getElementById('info-banner');
-            const placeholder = document.getElementById('banner-placeholder-image');
-            const channelName = document.getElementById('banner-channel-name');
-            const programTitle = document.getElementById('banner-program-title');
-            const programTime = document.getElementById('banner-program-time');
-            const channelDesc = document.getElementById('banner-channel-desc');
-
-            if (!banner || banner.classList.contains('hidden')) return;
-
-            if (globalIndex) {
-                const channel = allChannels[globalIndex - 1];
-                if (!channel) return;
-
-                // Fictional EPG/Description Data
-                const progName = `Jornal ${channel.nome.split(' ')[0]}`;
-                const progDesc = `Assista agora o melhor do ${channel.categoryKey.replace(/_/g, ' ')} com comentários exclusivos.`;
-
-                channelName.textContent = `#${channel.globalIndex} - ${channel.nome}`;
-                programTitle.textContent = `Programa Atual: ${progName}`;
-                programTime.textContent = `Tempo restante: ${Math.floor(Math.random() * 45) + 5} minutos (Fictício)`;
-                channelDesc.textContent = progDesc;
-                placeholder.innerHTML = `<img src="${channel.url.includes('placehold.co') ? channel.url : `https://placehold.co/400x225/6D28D9/ffffff?text=${channel.nome.replace(' ', '+')}`}" class="rounded-lg object-cover w-full h-full" onerror="this.onerror=null;this.src='https://placehold.co/400x225/6D28D9/ffffff?text=Sem+Prévia';">`;
-                placeholder.classList.remove('flex');
-                placeholder.classList.add('block');
-            } else {
-                channelName.textContent = 'Canal Selecionado';
-                programTitle.textContent = 'Programa Atual: Sem dados de EPG';
-                programTime.textContent = 'Tempo restante: N/A';
-                channelDesc.textContent = 'Use as setas para navegar e ENTER para abrir o player.';
-                placeholder.innerHTML = `<span class="text-sm">Mini-Poster / Placeholder</span>`;
-                placeholder.classList.remove('block');
-                placeholder.classList.add('flex');
-            }
+        else if(e.key === 'f' || e.key === 'F'){ e.preventDefault(); // toggle favorite
+          const ch = CHANNEL_DATA[state.currentCategory][state.channelIndex];
+          const key = state.currentCategory + '::' + ch.nome;
+          state.favorites[key] = !state.favorites[key];
+          REFS.playerLog.style.display = 'block'; REFS.playerLog.textContent = state.favorites[key] ? 'Favorito ✅' : 'Removido de Favoritos';
+          setTimeout(()=> REFS.playerLog.style.display = 'none', 1200);
         }
+        else if(e.key === 'Escape' || e.key === 'Backspace'){ e.preventDefault(); exitToChannels(); }
+        return;
+      }
 
-        /** Algoritmo espacial para navegação em grid (Smart TV). */
-        function findNextFocus(direction) {
-            const focusables = Array.from(document.querySelectorAll('#app-container .focusable:not(.hidden)'));
-            if (!focusElement || focusables.length === 0) return focusables[0];
+      // not player: navigate focusables
+      if(e.key === 'ArrowDown'){ e.preventDefault(); focusMove('down'); }
+      else if(e.key === 'ArrowUp'){ e.preventDefault(); focusMove('up'); }
+      else if(e.key === 'ArrowLeft'){ e.preventDefault(); focusMove('left'); }
+      else if(e.key === 'ArrowRight'){ e.preventDefault(); focusMove('right'); }
+      else if(e.key === 'Enter'){ e.preventDefault(); const el = state.focusables[state.focusIndex]; if(el) el.click(); }
+      else if(e.key === 'Escape' || e.key === 'Backspace'){
+        if(state.view === 'channels') showView('categories'); else if(state.view === 'categories') showView('home');
+      }
+    });
 
-            const currentRect = focusElement.getBoundingClientRect();
-            let bestMatch = null;
-            let minDistance = Infinity;
+    // click & hover to set focus (robust to inner elements)
+    document.addEventListener('click', (ev)=>{ const btn = ev.target.closest && ev.target.closest('.focusable'); if(btn){ rebuildFocusables(); const idx = state.focusables.indexOf(btn); if(idx>=0){ state.focusIndex = idx; applyFocus(); } } }, true);
+    document.body.addEventListener('mouseover', (e)=>{ const btn = e.target.closest && e.target.closest('.focusable'); if(btn){ rebuildFocusables(); const idx = state.focusables.indexOf(btn); if(idx>=0){ state.focusIndex = idx; applyFocus(); } } });
 
-            focusables.forEach(el => {
-                if (el === focusElement) return;
+    // Buttons
+    REFS.startBtn.addEventListener('click', ()=>{ renderCategories(); showView('categories'); });
+    REFS.catBack.addEventListener('click', ()=> showView('home'));
+    REFS.chanBack.addEventListener('click', ()=> showView('categories'));
 
-                const rect = el.getBoundingClientRect();
-                let distance = Infinity;
-                
-                // Calculate distance based on direction
-                switch (direction) {
-                    case 'ArrowUp':
-                        if (rect.bottom < currentRect.top && Math.abs(rect.left - currentRect.left) < currentRect.width * 2) {
-                            distance = (currentRect.top - rect.bottom) + Math.abs(currentRect.left - rect.left) * 0.5;
-                        }
-                        break;
-                    case 'ArrowDown':
-                        if (rect.top > currentRect.bottom && Math.abs(rect.left - currentRect.left) < currentRect.width * 2) {
-                            distance = (rect.top - currentRect.bottom) + Math.abs(currentRect.left - rect.left) * 0.5;
-                        }
-                        break;
-                    case 'ArrowLeft':
-                        if (rect.right < currentRect.left && Math.abs(rect.top - currentRect.top) < currentRect.height * 2) {
-                            distance = (currentRect.left - rect.right) + Math.abs(currentRect.top - rect.top) * 0.5;
-                        }
-                        break;
-                    case 'ArrowRight':
-                        if (rect.left > currentRect.right && Math.abs(rect.top - currentRect.top) < currentRect.height * 2) {
-                            distance = (rect.left - currentRect.right) + Math.abs(currentRect.top - rect.top) * 0.5;
-                        }
-                        break;
-                }
+    // subtle pupil motion (less sensitive)
+    setInterval(()=>{ const g = document.getElementById('pupilGroup'); if(!g) return; const dx = (Math.random()*6 - 3) * 0.25; const dy = (Math.random()*4 - 2) * 0.25; g.style.transform = `translate(${dx}px,${dy}px)`; }, 2600 + Math.random()*2400);
 
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    bestMatch = el;
-                }
-            });
+    // initial render categories & view
+    renderCategories();
+    showView('home');
 
-            return bestMatch;
-        }
-
-
-        // --- FUNÇÕES DE RENDERIZAÇÃO E MAPS (VIEWS) ---
-        
-        /** Gerencia o estado das views e navegação. */
-        function Maps(viewName, data = null) {
-            // Push current view to history if not the same
-            if (viewName !== currentView) {
-                 viewHistory.push(currentView);
-            }
-
-            currentView = viewName;
-
-            // Esconde todas as views
-            document.getElementById('home-view').classList.add('hidden');
-            document.getElementById('content-view').classList.add('hidden');
-            document.getElementById('player-view').classList.add('hidden');
-            document.getElementById('mobile-assistir-btn').classList.add('hidden');
-            document.getElementById('desktop-assistir-btn').classList.add('hidden');
-
-            // Renderiza a view correta
-            let initialFocusElement = null;
-
-            switch (viewName) {
-                case 'home':
-                    document.getElementById('home-view').classList.remove('hidden');
-                    document.getElementById('mobile-assistir-btn').classList.remove('hidden');
-                    document.getElementById('desktop-assistir-btn').classList.remove('hidden');
-                    initialFocusElement = document.getElementById('main-btn-watch');
-                    break;
-                case 'categories':
-                    document.getElementById('content-view').classList.remove('hidden');
-                    renderCategoriesPage();
-                    initialFocusElement = document.querySelector('.category-card');
-                    break;
-                case 'channels':
-                    document.getElementById('content-view').classList.remove('hidden');
-                    renderChannelsPage(data); // data is categoryKey
-                    initialFocusElement = document.querySelector('.channel-card');
-                    break;
-                case 'player':
-                    document.getElementById('player-view').classList.remove('hidden');
-                    renderPlayerView(data); // data is channelObj
-                    break;
-            }
-
-            // Define foco inicial e garante que não estamos no player
-            if (viewName !== 'player') {
-                setFocus(initialFocusElement);
-            }
-            
-            // Garante que o indicador de view está correto
-            const viewTitleEl = document.getElementById('current-view-title');
-            if (viewTitleEl) {
-                if (viewName === 'categories') viewTitleEl.textContent = 'TODAS AS CATEGORIAS';
-                else if (viewName === 'channels') viewTitleEl.textContent = data.toUpperCase().replace(/_/g, ' ');
-                else viewTitleEl.textContent = '';
-            }
-        }
-
-        /** Renderiza a tela inicial (Logo + Botão). */
-        function renderHomePage() {
-            // Conteúdo já está no HTML estático, Maps só precisa tornar visível.
-        }
-
-        /** Renderiza a grade/lista de categorias. */
-        function renderCategoriesPage() {
-            const gridArea = document.getElementById('grid-area');
-            const categoryKeys = Object.keys(CHANNEL_DATA);
-
-            const cardsHTML = categoryKeys.map(key => {
-                const name = key.replace(/_/g, ' ').toUpperCase();
-                const iconPlaceholder = key.includes('esportes') ? '⚽' : 
-                                        key.includes('noticias') ? '📰' : 
-                                        key.includes('infantil') ? '🧸' : 
-                                        key.includes('filmes') ? '🎬' : '📺';
-
-                return `
-                    <button class="category-card focusable relative bg-gray-800/50 p-6 rounded-xl overflow-hidden hover:bg-gray-700/50" 
-                            tabindex="0" 
-                            data-action="channels" 
-                            data-key="${key}">
-                        <span class="text-4xl block mb-2">${iconPlaceholder}</span>
-                        <h2 class="text-xl font-bold">${name}</h2>
-                        <span class="text-sm text-gray-400">${CHANNEL_DATA[key].length} Canais</span>
-                    </button>
-                `;
-            }).join('');
-
-            gridArea.innerHTML = `
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    ${cardsHTML}
-                </div>
-            `;
-            // Ensure banner is updated/hidden on category view
-            updateInfoBanner();
-        }
-
-        /** Renderiza a grade de canais de uma categoria. */
-        function renderChannelsPage(categoryKey) {
-            const gridArea = document.getElementById('grid-area');
-            const channels = CHANNEL_DATA[categoryKey];
-
-            const cardsHTML = channels.map(channel => {
-                const isPlaceholder = channel.url.includes('placehold.co');
-                const channelNumber = channel.globalIndex;
-                const favKey = `fav_${channelNumber}`;
-                const isFavorite = localStorage.getItem(favKey) === 'true';
-                const placeholderImage = isPlaceholder ? channel.url : `https://placehold.co/400x225/6D28D9/ffffff?text=${channel.nome.replace(' ', '+')}`;
-
-                return `
-                    <div class="channel-card focusable relative bg-gray-800/50 rounded-xl overflow-hidden hover:bg-gray-700/50" 
-                         tabindex="0" 
-                         data-action="player" 
-                         data-channel-index="${channelNumber}"
-                         data-url="${channel.url}"
-                         data-nome="${channel.nome}"
-                         data-fav-key="${favKey}">
-                        <div class="aspect-video">
-                            <img src="${placeholderImage}" alt="${channel.nome}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/400x225/6D28D9/ffffff?text=Sem+Prévia';">
-                        </div>
-                        <div class="p-3">
-                            <span class="absolute top-2 left-2 bg-violet-600 px-2 py-1 text-xs font-bold rounded-full">${channelNumber}</span>
-                            <span class="absolute top-2 right-2 text-yellow-400 transition-opacity ${isFavorite ? 'opacity-100' : 'opacity-0'} favorite-icon">★</span>
-                            <h3 class="text-base font-semibold truncate mt-1">${channel.nome}</h3>
-                            <p class="text-xs text-gray-400">${channel.categoryName}</p>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            gridArea.innerHTML = `
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    ${cardsHTML}
-                </div>
-            `;
-            
-            // Re-apply focus style on load
-            document.querySelectorAll('.channel-card').forEach(card => {
-                card.addEventListener('focus', () => setFocus(card));
-                card.addEventListener('blur', () => card.classList.remove('focused'));
-                card.addEventListener('mouseenter', () => updateInfoBanner(card.dataset.channelIndex));
-                card.addEventListener('mouseleave', () => updateInfoBanner());
-            });
-
-            // Scroll to the top when a new channel view is rendered
-            gridArea.scrollTop = 0;
-            updateInfoBanner();
-        }
-
-        /** Inicializa o player HLS e exibe o overlay. */
-        function renderPlayerView(channelObj) {
-            currentChannelObject = channelObj;
-            const videoEl = document.getElementById('video-player');
-            const channelNameEl = document.getElementById('player-channel-name');
-            const fullscreenBtn = document.getElementById('fullscreen-btn');
-            
-            // Elementos do novo overlay de informação
-            const infoOverlay = document.getElementById('player-channel-info-overlay');
-            const infoNumber = document.getElementById('player-info-number');
-            const infoName = document.getElementById('player-info-name');
-
-            channelNameEl.textContent = channelObj.nome;
-            videoEl.muted = true; // Começa mudo
-            videoEl.poster = ''; // Limpa poster
-            
-            // Exibe o overlay de informação do canal
-            infoNumber.textContent = channelObj.globalIndex;
-            infoName.textContent = channelObj.nome;
-            infoOverlay.classList.remove('hidden');
-            infoOverlay.classList.remove('opacity-0');
-
-            // Limpa timer antigo (se houver) e seta um novo para esconder a info
-            clearTimeout(channelInfoTimeout);
-            channelInfoTimeout = setTimeout(() => {
-                infoOverlay.classList.add('opacity-0');
-                // Adiciona 'hidden' depois que a transição terminar
-                setTimeout(() => infoOverlay.classList.add('hidden'), 500); 
-            }, 4000); // Exibe por 4 segundos
-
-            // Tenta entrar em fullscreen no player
-            if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => console.warn("Fullscreen negado pelo navegador."));
-            }
-
-            // Inicializa ou destrói o player HLS antigo
-            if (hlsPlayer) {
-                hlsPlayer.destroy();
-                hlsPlayer = null;
-            }
-            
-            // Para canais placeholder que não são M3U8, não inicializa HLS, apenas mostra a imagem
-            if (channelObj.url.endsWith('.m3u8')) {
-                initializeHlsPlayer(channelObj.url);
-                videoEl.poster = ''; // Remove poster if stream is ready
-            } else {
-                console.warn("URL não é HLS, usando poster placeholder.");
-                videoEl.src = '';
-                videoEl.poster = channelObj.url;
-                document.getElementById('lag-indicator').classList.remove('hidden');
-            }
-
-            // Garante que o vídeo tente tocar
-            videoEl.play().catch(error => {
-                console.warn("Autoplay bloqueado, aguardando interação do usuário.", error);
-                // Em muitos navegadores, o HLS.js (ou o clique inicial) já lidou com isso.
-            });
-
-            // Inicia o timer de auto-hide da barra de controles
-            setAutoHideControls();
-
-            // Seta o foco para o player (embora não seja um elemento interativo tradicional)
-            setFocus(fullscreenBtn);
-        }
-        
-        // --- PLAYER HLS ---
-
-        /** Inicializa o player HLS com a URL fornecida. */
-        function initializeHlsPlayer(url) {
-            const video = document.getElementById('video-player');
-            const lagIndicator = document.getElementById('lag-indicator');
-            lagIndicator.classList.add('hidden'); // Oculta no início
-
-            if (Hls.isSupported()) {
-                hlsPlayer = new Hls();
-                hlsPlayer.on(Hls.Events.MEDIA_ATTACHED, function () {
-                    hlsPlayer.loadSource(url);
-                });
-                hlsPlayer.attachMedia(video);
-                hlsPlayer.on(Hls.Events.MANIFEST_PARSED, function() {
-                    video.play().catch(e => console.warn("Play falhou após manifest parsed:", e));
-                });
-
-                // Captura eventos de erro/lag
-                hlsPlayer.on(Hls.Events.ERROR, function (event, data) {
-                    console.error('HLS Error:', data);
-                    if (data.fatal) {
-                        lagIndicator.classList.remove('hidden');
-                        switch (data.type) {
-                            case Hls.ErrorTypes.NETWORK_ERROR:
-                                console.error('Fatal network error, trying to recover...');
-                                hlsPlayer.recoverMediaError();
-                                break;
-                            case Hls.ErrorTypes.MEDIA_ERROR:
-                                console.error('Fatal media error, trying to recover...');
-                                hlsPlayer.recoverMediaError();
-                                break;
-                            default:
-                                console.error('HLS fatal error. Stopping playback.');
-                                break;
-                        }
-                    }
-                });
-                
-                // Evento de stall/buffer vazio
-                hlsPlayer.on(Hls.Events.BUFFER_EMPTY, () => lagIndicator.classList.remove('hidden'));
-                
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                // Suporte nativo do Safari/iOS
-                video.src = url;
-                video.play().catch(e => console.warn("Play nativo falhou:", e));
-                console.log("Usando suporte nativo (Safari).");
-            } else {
-                // Não use alert
-                console.error('Seu navegador não suporta HLS.');
-            }
-
-            // Evento para ocultar o indicador de lag quando o vídeo estiver rodando
-            video.addEventListener('playing', () => lagIndicator.classList.add('hidden'));
-            video.addEventListener('stalled', () => lagIndicator.classList.remove('hidden'));
-        }
-
-        /** Gerencia o timer de auto-hide da barra de controles do player. */
-        function setAutoHideControls(timeoutMs = 5000) {
-            const controlsBar = document.getElementById('player-controls-bar');
-            
-            // Limpa o timer anterior
-            clearTimeout(autoHideTimer);
-
-            // Mostra a barra
-            controlsBar.style.opacity = '1';
-
-            // Inicia o novo timer para ocultar
-            autoHideTimer = setTimeout(() => {
-                controlsBar.style.opacity = '0';
-            }, timeoutMs);
-        }
-
-        function toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => {
-                    console.error(`Erro ao tentar fullscreen: ${err.message}`);
-                });
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                }
-            }
-        }
-
-        // --- MANUSEIO DE TECLADO E INTERAÇÕES ---
-
-        /** Processa a entrada numérica multi-dígito (0-9). */
-        function processNumericInput(key) {
-            const numericOverlay = document.getElementById('numeric-overlay');
-            
-            clearTimeout(numericTimeout);
-            
-            // Limita a 3 dígitos (para não tentar números muito grandes)
-            if (numericInput.length >= 3) {
-                numericInput = key;
-            } else {
-                numericInput += key;
-            }
-            
-            numericOverlay.textContent = numericInput;
-            numericOverlay.classList.remove('hidden');
-
-            const channelNumber = parseInt(numericInput, 10);
-            const channelToFocus = allChannels.find(c => c.globalIndex === channelNumber);
-
-            if (channelToFocus) {
-                // Canal válido encontrado, espera timeout para confirmar ou digitar mais
-                numericTimeout = setTimeout(() => {
-                    // Navegar e focar o canal
-                    Maps('channels', channelToFocus.categoryKey);
-                    
-                    // Espera um ciclo do DOM para focar o card renderizado
-                    setTimeout(() => {
-                        const targetCard = document.querySelector(`.channel-card[data-channel-index="${channelToFocus.globalIndex}"]`);
-                        if (targetCard) {
-                            setFocus(targetCard);
-                            targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }
-                        numericInput = '';
-                        numericOverlay.classList.add('hidden');
-                    }, 50);
-
-                }, 1200); // 1.2s timeout
-            } else {
-                // Canal inválido (ou número incompleto) - apenas espera o timeout
-                numericTimeout = setTimeout(() => {
-                    // Feedback visual de "shake" ou erro aqui (opcional)
-                    console.log(`Canal #${numericInput} não encontrado ou inválido.`);
-                    numericInput = '';
-                    numericOverlay.classList.add('hidden');
-                }, 1200);
-            }
-        }
-        
-        /** Handler principal de eventos de teclado. */
-        function handleKeyDown(e) {
-            const key = e.key;
-
-            // 1. Teclas Numéricas (0-9) - Prioridade máxima para troca rápida
-            if (currentView !== 'player' && key >= '0' && key <= '9') {
-                e.preventDefault();
-                processNumericInput(key);
-                return;
-            }
-            
-            // Se estiver em input numérico, só aceita números
-            if (numericInput.length > 0 && !(key >= '0' && key <= '9')) {
-                clearTimeout(numericTimeout);
-                numericInput = '';
-                document.getElementById('numeric-overlay').classList.add('hidden');
-            }
-
-            // 2. Comportamento no Player View
-            if (currentView === 'player') {
-                if (key === 'Escape' || key === 'Backspace') {
-                    e.preventDefault();
-                    if (document.fullscreenElement) {
-                        document.exitFullscreen();
-                    }
-                    if (hlsPlayer) {
-                        hlsPlayer.destroy();
-                        hlsPlayer = null;
-                    }
-                    Maps(viewHistory.pop() || 'home');
-                } else if (key === 'Enter' || key === ' ') {
-                    e.preventDefault();
-                    setAutoHideControls(); // Apenas alterna visibilidade dos controles
-                } else if (key === 'm' || key === 'M') {
-                    e.preventDefault();
-                    const video = document.getElementById('video-player');
-                    video.muted = !video.muted;
-                    console.log(`Mute: ${video.muted ? 'ON' : 'OFF'}`);
-                } else if (key === 'ArrowUp' || key === 'ArrowDown') {
-                    e.preventDefault();
-                    if (!currentChannelObject) return;
-
-                    let currentIndex = currentChannelObject.globalIndex - 1; // 0-based index
-                    
-                    if (key === 'ArrowUp') {
-                        // Próximo canal (índice maior)
-                        currentIndex = (currentIndex + 1) % allChannels.length;
-                    } else {
-                        // Canal anterior (índice menor)
-                        currentIndex = (currentIndex - 1 + allChannels.length) % allChannels.length;
-                    }
-                    
-                    const newChannelObj = allChannels[currentIndex];
-                    if (newChannelObj) {
-                        renderPlayerView(newChannelObj);
-                    }
-                }
-                return;
-            }
-
-            // Ação (Enter/Space)
-            if (key === 'Enter' || key === ' ') {
-                e.preventDefault();
-                if (focusElement) {
-                    const action = focusElement.dataset.action;
-                    if (action === 'categories') {
-                        Maps('categories');
-                    } else if (action === 'channels') {
-                        Maps('channels', focusElement.dataset.key);
-                    } else if (action === 'player') {
-                        const channelIndex = focusElement.dataset.channelIndex;
-                        const channelObj = allChannels[channelIndex - 1];
-                        if (channelObj) {
-                            Maps('player', channelObj);
-                        }
-                    }
-                }
-                return;
-            }
-
-            // Voltar/Escape
-            if (key === 'Escape' || key === 'Backspace') {
-                e.preventDefault();
-                const previousView = viewHistory.pop();
-                if (previousView) {
-                    Maps(previousView);
-                } else {
-                    Maps('home');
-                }
-                return;
-            }
-
-            // Home
-            if (key === 'Home') {
-                e.preventDefault();
-                viewHistory = [];
-                Maps('home');
-                return;
-            }
-
-            // Favoritar Canal ('C')
-            if (currentView === 'channels' && (key === 'c' || key === 'C') && focusElement && focusElement.classList.contains('channel-card')) {
-                e.preventDefault();
-                const card = focusElement;
-                const favKey = card.dataset.favKey;
-                const isFavorite = localStorage.getItem(favKey) === 'true';
-                
-                if (isFavorite) {
-                    localStorage.setItem(favKey, 'false');
-                    card.querySelector('.favorite-icon').style.opacity = '0';
-                } else {
-                    localStorage.setItem(favKey, 'true');
-                    card.querySelector('.favorite-icon').style.opacity = '1';
-                }
-                return;
-            }
-        }
-        
-        /** Simula um evento de teclado (para botões na tela). */
-        function triggerKey(key) {
-            console.log("Triggering key: ", key);
-            const event = new KeyboardEvent('keydown', {
-                key: key,
-                bubbles: true,
-                cancelable: true
-            });
-            window.dispatchEvent(event);
-        }
-        
-        // --- ANIMAÇÕES E INICIALIZAÇÃO ---
-
-        /** Controla as animações do Logo (Blink, Pupil, Glow). */
-        function startEyeAnimations() {
-            const pupil = document.getElementById('pupil');
-            const eyelid = document.getElementById('eyelid-overlay');
-
-            // 1. Blink
-            function blink() {
-                eyelid.style.transform = 'scaleY(1)'; // Close
-                setTimeout(() => {
-                    eyelid.style.transform = 'scaleY(0)'; // Open
-                    setTimeout(blink, Math.random() * 4000 + 3000); // Wait 3s to 7s
-                }, 100); // Blink fast (close time)
-            }
-            eyelid.style.transform = 'scaleY(0)'; // Start open
-            setTimeout(blink, 3000);
-
-            // 2. Pupil Movement (Subtle Jitter)
-            function movePupil() {
-                const tx = Math.random() * 8 - 4; // -4 to +4
-                const ty = Math.random() * 8 - 4;
-                pupil.style.transform = `translate(${tx}px, ${ty}px)`;
-                setTimeout(movePupil, 1000); // Move every second
-            }
-            movePupil();
-
-            // 3. Simple Glow (via CSS or subtle JS) - CSS handles glow, JS adds subtle jitter to the whole logo
-            const eyeLogo = document.getElementById('eye-logo');
-            function jitter() {
-                const rz = Math.random() * 0.5 - 0.25; // -0.25deg to +0.25deg
-                const jx = Math.random() * 0.2 - 0.1; // -0.1px to +0.1px
-                eyeLogo.style.transform = `rotate(${rz}deg) translateX(${jx}px)`;
-                setTimeout(jitter, 100);
-            }
-            jitter();
-        }
-
-        /** Ponto de entrada da aplicação. */
-        window.onload = function () {
-            // Inicializa as animações
-            startEyeAnimations();
-
-            // Seta o handler de teclado global
-            window.addEventListener('keydown', handleKeyDown);
-            
-            // Delegação de evento para cliques nos botões de ação (mais robusto)
-            document.body.addEventListener('click', function(e) {
-                // Encontra o elemento clicado ou seu pai que tenha data-action
-                const actionElement = e.target.closest('[data-action]');
-                
-                if (actionElement) {
-                    const action = actionElement.dataset.action;
-                    
-                    if (action === 'categories') {
-                        Maps('categories');
-                    } else if (action === 'channels') {
-                        Maps('channels', actionElement.dataset.key);
-                    } else if (action === 'player') {
-                        const channelIndex = actionElement.dataset.channelIndex;
-                        const channelObj = allChannels[channelIndex - 1];
-                        if (channelObj) {
-                            Maps('player', channelObj);
-                        }
-                    }
-                }
-            });
-
-            // Oculta/Mostra controles on-screen baseado na view
-            // (Esta lógica pode ser movida para a função Maps se ficar complexa)
-            if (currentView === 'player' || currentView === 'home') {
-                document.getElementById('on-screen-controls').classList.add('hidden');
-            }
-
-            // Inicia na Home View
-            Maps('home');
-        };
-
-    </script>
+    // build initial focusables after load
+    setTimeout(()=> rebuildFocusables(), 300);
+  </script>
 </body>
 </html>
