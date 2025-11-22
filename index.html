@@ -1,28 +1,661 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IVIEW - Início</title>
-<link rel="stylesheet" href="css/styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPVIEW - TV Web HLS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.0"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* 3. Tema: Dark Violet, minimalista e elegante */
+        :root {
+            /* Cor primária: #0F071A */
+            --color-primary: #0F071A;
+            /* Gradiente violeta para púrpura */
+            --color-gradient-start: #6D28D9; /* Violeta 600 */
+            --color-gradient-end: #9333EA;   /* Púrpura 600 */
+            --color-focus-glow: 0 0 10px rgba(147, 51, 234, 0.8), 0 0 20px rgba(109, 40, 217, 0.6);
+            --color-focus-glow-light: 0 0 5px rgba(147, 51, 234, 0.8);
+        }
+
+        body {
+            background-color: var(--color-primary);
+            font-family: 'Inter', sans-serif;
+            color: white;
+            overflow: hidden; /* Para garantir a experiência de tela cheia */
+        }
+
+        /* Estilização para o texto com gradiente */
+        .gradient-text {
+            background-image: linear-gradient(45deg, var(--color-gradient-start), var(--color-gradient-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+        }
+
+        /* 4. Estilo de Foco (.focused) */
+        .focusable {
+            transition: all 0.25s ease-out;
+            cursor: pointer;
+        }
+
+        .focused {
+            transform: scale(1.06);
+            box-shadow: var(--color-focus-glow);
+            outline: none; /* Remover o outline padrão do navegador */
+        }
+
+        /* Efeito de Fundo: Formas Abstratas (CSS puro para simplicidade) */
+        #background-blobs div {
+            position: absolute;
+            width: 300px; height: 300px;
+            background: rgba(147, 51, 234, 0.1); /* Púrpura suave */
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.5;
+            animation: pulse-move 30s infinite alternate ease-in-out;
+            z-index: 0;
+        }
+
+        #blob-1 { top: 10%; left: 5%; animation-delay: 0s; }
+        #blob-2 { bottom: 20%; right: 10%; width: 400px; height: 400px; animation-delay: 5s; }
+        #blob-3 { top: 50%; left: 45%; width: 200px; height: 200px; animation-delay: 10s; }
+
+        @keyframes pulse-move {
+            0% { transform: translate(0, 0) scale(1); opacity: 0.5; }
+            50% { transform: translate(100px, -50px) scale(1.1); opacity: 0.7; }
+            100% { transform: translate(-50px, 80px) scale(0.9); opacity: 0.5; }
+        }
+
+        /* 3. Botão Flutuante (Desktop/TV: verticalizado) */
+        @media (min-width: 1024px) {
+            #live-tv-button {
+                transform: rotate(90deg) translate(-50%, 0); /* Rotaciona e centraliza */
+                transform-origin: 0 0; /* Ponto de rotação */
+                top: 50%;
+                left: 0; /* Posicionado na lateral esquerda */
+            }
+        }
+    </style>
 </head>
 
-<body class="home-screen">
+<body onkeydown="handleKeyDown(event)">
 
-    <div class="eye-container">
-        <div class="eye">
-            <div class="pupil"></div>
-        </div>
+    <div id="background-blobs" class="fixed inset-0 overflow-hidden opacity-30">
+        <div id="blob-1"></div>
+        <div id="blob-2"></div>
+        <div id="blob-3"></div>
     </div>
+    
+    <main id="app-container" class="relative z-10 w-full h-screen"></main>
 
-    <h1 class="app-title">IVIEW</h1>
-
-    <button class="btn" onclick="window.location.href='tv.html'">
-        <span class="tv-icon">📺</span> ASSISTIR TV AO VIVO
+    <button id="live-tv-button" class="
+        focusable
+        fixed z-50
+        bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-sm
+        lg:bottom-auto lg:left-0 lg:w-auto lg:h-12
+        px-8 py-3
+        bg-white/5 backdrop-blur-md
+        text-white font-bold text-lg
+        rounded-full shadow-2xl border border-white/10
+    " onclick="Maps('CATEGORIES')" data-category="start">
+        <span class="lg:w-auto lg:block">ASSISTIR TV AO VIVO</span>
     </button>
+    
+    <footer class="fixed bottom-2 left-0 right-0 z-40 text-center text-xs text-white/50">
+        Powered by Levi
+    </footer>
 
-    <footer>Powered by Levi</footer>
+    <script>
+        // 2. DADOS DE CANAIS E LINKS (OBRIGATÓRIO)
+        const CHANNEL_DATA = {
+            "esportes": [
+                { "nome": "Premiere 1", "url": "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/d485d118d525ae4326aa31371f5dfcef/premiere.m3u8" },
+                { "nome": "Premiere 2", "url": "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/aa1f6257eeb308e3e6677bae5fb7f1c8/premiere2.m3u8" }
+            ],
+            "noticias": [
+                { "nome": "Record News", "url": "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/3728ae10c1a4f5b4a394d9771ec12db2/record.m3u8" }
+            ],
+            "infantil": [
+                { "nome": "Cartoon Network", "url": "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/f67e159151a581847c31a461034c795a/cartoonnetwork.m3u8" },
+                { "nome": "Nickelodeon", "url": "https://d1muf25xa11so8hp22.s27-usa-cloudfront-net.online/token/528246d1903b4743bca33088eedc800f/nickelodeon.m3u8" }
+            ],
+            "filmes_e_series": [
+                { "nome": "Telecine Premium", "url": "https://placehold.co/400x225/ba55d3/ffffff?text=Telecine" },
+                { "nome": "HBO HD", "url": "https://placehold.co/400x225/4b0082/ffffff?text=HBO" }
+            ],
+            "variedades": [
+                { "nome": "Multishow", "url": "https://placehold.co/400x225/daa520/000000?text=Multi" },
+                { "nome": "GNT", "url": "https://placehold.co/400x225/808080/ffffff?text=GNT" }
+            ]
+        };
 
-<script src="js/app.js"></script>
+        const appContainer = document.getElementById('app-container');
+        const liveTvButton = document.getElementById('live-tv-button');
+        let currentView = 'HOME';
+        let viewHistory = ['HOME'];
+        let currentChannelName = '';
+        let hlsPlayer = null;
+        let infoBarTimeout = null;
+
+        /**
+         * FUNÇÕES DE NAVEGAÇÃO E FOCO SMART TV
+         */
+
+        // Adiciona/Remove a classe 'focused' e garante que o elemento focado seja visível
+        function updateFocus(newElement) {
+            document.querySelectorAll('.focused').forEach(el => el.classList.remove('focused'));
+            if (newElement) {
+                newElement.classList.add('focused');
+                newElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+            }
+        }
+
+        // Encontra o próximo elemento 'focusable' na direção especificada
+        function findNextFocus(direction) {
+            const focusables = Array.from(document.querySelectorAll('.focusable:not([hidden])'));
+            const currentFocused = document.querySelector('.focused');
+            let currentIndex = focusables.findIndex(el => el === currentFocused);
+            
+            // Se não houver foco atual, foca no primeiro ou no botão flutuante
+            if (currentIndex === -1) {
+                return currentView === 'HOME' ? liveTvButton : focusables[0] || null;
+            }
+
+            const currentRect = currentFocused.getBoundingClientRect();
+            let bestCandidate = null;
+            let minDistance = Infinity;
+
+            for (const el of focusables) {
+                if (el === currentFocused) continue;
+
+                const rect = el.getBoundingClientRect();
+                let distance = Infinity;
+
+                switch (direction) {
+                    case 'ArrowUp':
+                        // O candidato deve estar acima e ter alguma sobreposição horizontal
+                        if (rect.bottom < currentRect.top && 
+                            (rect.right > currentRect.left && rect.left < currentRect.right)) {
+                            distance = currentRect.top - rect.bottom;
+                        } else if (rect.bottom < currentRect.top) { // Se não tiver sobreposição, prioriza o mais próximo
+                            distance = Math.hypot(currentRect.top - rect.bottom, (currentRect.left + currentRect.right) / 2 - (rect.left + rect.right) / 2) * 1.5;
+                        }
+                        break;
+                    case 'ArrowDown':
+                        // O candidato deve estar abaixo e ter alguma sobreposição horizontal
+                        if (rect.top > currentRect.bottom && 
+                            (rect.right > currentRect.left && rect.left < currentRect.right)) {
+                            distance = rect.top - currentRect.bottom;
+                        } else if (rect.top > currentRect.bottom) {
+                            distance = Math.hypot(rect.top - currentRect.bottom, (currentRect.left + currentRect.right) / 2 - (rect.left + rect.right) / 2) * 1.5;
+                        }
+                        break;
+                    case 'ArrowLeft':
+                        // O candidato deve estar à esquerda
+                        if (rect.right < currentRect.left && 
+                            (rect.bottom > currentRect.top && rect.top < currentRect.bottom)) {
+                            distance = currentRect.left - rect.right;
+                        } else if (rect.right < currentRect.left) {
+                            distance = Math.hypot(currentRect.left - rect.right, (currentRect.top + currentRect.bottom) / 2 - (rect.top + rect.bottom) / 2) * 1.5;
+                        }
+                        break;
+                    case 'ArrowRight':
+                        // O candidato deve estar à direita
+                        if (rect.left > currentRect.right && 
+                            (rect.bottom > currentRect.top && rect.top < currentRect.bottom)) {
+                            distance = rect.left - currentRect.right;
+                        } else if (rect.left > currentRect.right) {
+                            distance = Math.hypot(rect.left - currentRect.right, (currentRect.top + currentRect.bottom) / 2 - (rect.top + rect.bottom) / 2) * 1.5;
+                        }
+                        break;
+                }
+
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    bestCandidate = el;
+                }
+            }
+
+            return bestCandidate;
+        }
+
+        // 4. Eventos de Teclado
+        function handleKeyDown(e) {
+            if (currentView === 'PLAYER') {
+                handlePlayerKey(e);
+                return;
+            }
+
+            let nextFocus = null;
+
+            switch (e.key) {
+                case 'ArrowUp':
+                case 'ArrowDown':
+                case 'ArrowLeft':
+                case 'ArrowRight':
+                    e.preventDefault(); // Evita a rolagem da página
+                    nextFocus = findNextFocus(e.key);
+                    if (nextFocus) {
+                        updateFocus(nextFocus);
+                    }
+                    break;
+                case 'Enter':
+                    e.preventDefault();
+                    document.querySelector('.focused')?.click();
+                    break;
+                case 'Escape':
+                case 'Backspace':
+                    e.preventDefault();
+                    goBack();
+                    break;
+            }
+        }
+
+        /**
+         * FUNÇÕES DE RENDERIZAÇÃO DE TELAS
+         */
+
+        // 3. Renderiza a Tela Inicial ('HOME')
+        function renderHomePage() {
+            liveTvButton.style.display = 'block'; // Mostra o botão flutuante
+            
+            const svgEye = `
+                <svg id="eye-symbol" viewBox="0 0 100 100" class="w-32 h-32 lg:w-48 lg:h-48">
+                    <defs>
+                        <radialGradient id="grad-glow">
+                            <stop offset="0%" stop-color="var(--color-gradient-end)" stop-opacity="0.9"/>
+                            <stop offset="100%" stop-color="var(--color-gradient-start)" stop-opacity="0"/>
+                        </radialGradient>
+                    </defs>
+                    <circle cx="50" cy="50" r="40" stroke="url(#grad-glow)" stroke-width="3" fill="none" class="opacity-70"/>
+                    <circle cx="50" cy="50" r="15" fill="var(--color-gradient-end)" class="opacity-90 transition-all duration-500 ease-in-out" id="iris"/>
+                    <circle cx="50" cy="50" r="5" fill="#FFFFFF" id="pupil" style="box-shadow: var(--color-focus-glow-light); transition: transform 0.8s ease-in-out;"/>
+                    <circle cx="50" cy="50" r="15" fill="url(#grad-glow)" class="opacity-50 transition-all duration-500" id="pulse-glow" style="transform-origin: 50% 50%;"/>
+                </svg>
+            `;
+            
+            appContainer.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full text-center p-4">
+                    <div id="eye-container" class="relative transition-transform duration-100 ease-linear" style="transform: translate(0, 0);">
+                        ${svgEye}
+                    </div>
+                    <h1 class="gradient-text text-5xl lg:text-7xl font-extrabold mt-6 tracking-widest uppercase">
+                        IPVIEW
+                    </h1>
+                </div>
+            `;
+            
+            // Animações (JS/CSS)
+            const pupil = document.getElementById('pupil');
+            const eyeContainer = document.getElementById('eye-container');
+            const pulseGlow = document.getElementById('pulse-glow');
+
+            // Piscar
+            setInterval(() => {
+                const duration = Math.random() * 0.2 + 0.1; // 100ms a 300ms
+                eyeContainer.style.transform = 'scaleY(0)';
+                setTimeout(() => {
+                    eyeContainer.style.transform = 'scaleY(1)';
+                }, duration * 1000);
+            }, Math.random() * 3000 + 4000); // 4 a 7 segundos
+
+            // Pupila: Movimento Sutil
+            setInterval(() => {
+                const x = Math.random() * 4 - 2; // -2 a 2
+                const y = Math.random() * 4 - 2; // -2 a 2
+                pupil.style.transform = `translate(${x}px, ${y}px)`;
+            }, 1500);
+
+            // Glow: Pulsação
+            setInterval(() => {
+                const scale = Math.random() * 0.2 + 1; // 1 a 1.2
+                const opacity = Math.random() * 0.3 + 0.5; // 0.5 a 0.8
+                pulseGlow.style.transform = `scale(${scale})`;
+                pulseGlow.style.opacity = opacity;
+            }, 1000);
+
+            // Micro-oscilação (Jitter/Translação sutil)
+            setInterval(() => {
+                const x = Math.random() * 0.5 - 0.25;
+                const y = Math.random() * 0.5 - 0.25;
+                eyeContainer.style.transform = `translate(${x}px, ${y}px)`;
+            }, 100);
+
+            // Foco inicial no botão flutuante
+            setTimeout(() => updateFocus(liveTvButton), 100);
+        }
+
+        // 5. Renderiza a Tela de Categorias ('CATEGORIES')
+        function renderCategoriesPage() {
+            liveTvButton.style.display = 'none'; // Oculta o botão flutuante
+            const categories = Object.keys(CHANNEL_DATA);
+            
+            const categoriesHtml = categories.map(key => {
+                const categoryName = key.replace(/_/g, ' ').toUpperCase();
+                return `
+                    <div class="focusable p-4 rounded-xl shadow-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer text-center"
+                        onclick="Maps('CHANNELS', '${key}')" 
+                        data-category-key="${key}">
+                        <h2 class="text-xl font-bold gradient-text">${categoryName}</h2>
+                        <p class="text-sm text-white/70 mt-1">${CHANNEL_DATA[key].length} canais</p>
+                    </div>
+                `;
+            }).join('');
+
+            appContainer.innerHTML = `
+                <div class="h-full overflow-y-auto p-8 pt-12">
+                    <h1 class="text-4xl font-bold mb-8">Categorias de Canais</h1>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                        ${categoriesHtml}
+                    </div>
+                </div>
+            `;
+            
+            // Foco inicial no primeiro card
+            setTimeout(() => updateFocus(document.querySelector('.focusable')), 100);
+        }
+
+        // 5. Renderiza a Tela de Canais ('CHANNELS')
+        function renderChannelsPage(categoryKey) {
+            liveTvButton.style.display = 'none';
+            const channels = CHANNEL_DATA[categoryKey] || [];
+            const categoryName = categoryKey.replace(/_/g, ' ').toUpperCase();
+
+            const channelsHtml = channels.map(channel => {
+                // Heurística simples: se a URL for placeholder, usa um ícone
+                const isPlaceholder = channel.url.includes('placehold.co');
+                const contentHtml = isPlaceholder 
+                    ? `<div class="w-full h-full flex items-center justify-center bg-gray-700/50 text-2xl rounded-lg">STREAM INDISPONÍVEL</div>`
+                    : `<div class="w-full h-full flex items-center justify-center bg-gray-700/50 text-2xl rounded-lg">Player HLS</div>`;
+
+                return `
+                    <div class="focusable channel-card p-3 rounded-xl shadow-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                        onclick="Maps('PLAYER', { url: '${channel.url}', name: '${channel.nome}' })" 
+                        data-channel-url="${channel.url}"
+                        data-channel-name="${channel.nome}">
+                        <div class="w-full aspect-video rounded-lg overflow-hidden mb-2">
+                            ${contentHtml}
+                        </div>
+                        <h3 class="text-lg font-semibold text-white/90 truncate">${channel.nome}</h3>
+                    </div>
+                `;
+            }).join('');
+
+            appContainer.innerHTML = `
+                <div class="h-full overflow-y-auto p-8 pt-12">
+                    <h1 class="text-4xl font-bold mb-8">Canais em <span class="gradient-text">${categoryName}</span></h1>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6">
+                        ${channelsHtml}
+                    </div>
+                    <button class="focusable mt-8 px-6 py-2 rounded-full bg-white/10 hover:bg-white/20" onclick="goBack()">
+                        ← Voltar para Categorias
+                    </button>
+                </div>
+            `;
+
+            // Foco inicial no primeiro card
+            setTimeout(() => updateFocus(document.querySelector('.channel-card') || document.querySelector('.focusable')), 100);
+        }
+
+        // 6. Renderiza a Tela do Player ('PLAYER')
+        function renderPlayerPage(channelData) {
+            liveTvButton.style.display = 'none';
+            currentChannelName = channelData.name;
+
+            appContainer.innerHTML = `
+                <div class="relative w-full h-full bg-black">
+                    <video id="video-player" class="w-full h-full object-cover bg-black" autoplay controlslist="nodownload nofullscreen" disablepictureinpicture></video>
+                    
+                    <div id="info-bar" class="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/70 to-transparent transition-opacity duration-500 opacity-100">
+                        <h2 class="text-2xl font-bold">${channelData.name}</h2>
+                    </div>
+
+                    <div id="lag-indicator" class="absolute top-4 right-4 bg-red-600 text-white text-xs px-2 py-1 rounded transition-opacity duration-300 opacity-0">
+                        LAG/ERRO
+                    </div>
+
+                    <div id="placeholder-message" class="absolute inset-0 flex items-center justify-center bg-black/80 text-white text-3xl font-bold p-8 hidden">
+                        Conteúdo Indisponível (Placeholder URL). Use um link M3U8/HLS real.
+                    </div>
+                </div>
+            `;
+            
+            // Entrar em tela cheia (melhora a experiência de Smart TV)
+            const videoElement = document.getElementById('video-player');
+            if (videoElement.requestFullscreen) {
+                videoElement.requestFullscreen().catch(() => {});
+            }
+
+            // Inicializa o player
+            initializeHlsPlayer(channelData.url);
+            
+            // Inicia o timer de auto-hide
+            resetInfoBarTimer();
+        }
+
+        // 6. Inicializa o Player HLS.js
+        function initializeHlsPlayer(url) {
+            const video = document.getElementById('video-player');
+            const lagIndicator = document.getElementById('lag-indicator');
+            const placeholderMessage = document.getElementById('placeholder-message');
+
+            if (url.includes('placehold.co')) {
+                // Simplesmente mostra a mensagem de placeholder e não tenta carregar HLS
+                placeholderMessage.style.display = 'flex';
+                lagIndicator.style.display = 'none';
+                return; 
+            } else {
+                placeholderMessage.style.display = 'none';
+                lagIndicator.style.display = 'block';
+            }
+
+            if (hlsPlayer) {
+                hlsPlayer.destroy();
+            }
+
+            if (Hls.isSupported()) {
+                hlsPlayer = new Hls({
+                    // Configurações do HLS.js para melhor experiência em TV/Web
+                    lowLatencyMode: true,
+                    autoStartLoad: true,
+                    maxBufferLength: 30, // 30s de buffer máximo
+                    maxMaxBufferLength: 60,
+                });
+                
+                hlsPlayer.loadSource(url);
+                hlsPlayer.attachMedia(video);
+
+                hlsPlayer.on(Hls.Events.MANIFEST_PARSED, function() {
+                    video.play().catch(error => {
+                        console.error("Erro ao iniciar a reprodução:", error);
+                        // Exibe a barra de informações se a reprodução falhar
+                        showInfoBar();
+                    });
+                });
+
+                // 6. Indicador de Status - Comportamento HLS
+                hlsPlayer.on(Hls.Events.ERROR, function(event, data) {
+                    console.error('HLS Error:', data);
+                    lagIndicator.textContent = `ERRO: ${data.details.toUpperCase()}`;
+                    lagIndicator.classList.replace('bg-green-600', 'bg-red-600');
+                    lagIndicator.style.opacity = '1';
+                });
+
+                hlsPlayer.on(Hls.Events.BUFFER_EMPTY, function() {
+                    lagIndicator.textContent = 'BUFFER VAZIO';
+                    lagIndicator.classList.replace('bg-green-600', 'bg-red-600');
+                    lagIndicator.style.opacity = '1';
+                });
+
+                hlsPlayer.on(Hls.Events.BUFFER_STALLED, function() {
+                    lagIndicator.textContent = 'ESTAGNADO';
+                    lagIndicator.classList.replace('bg-green-600', 'bg-red-600');
+                    lagIndicator.style.opacity = '1';
+                });
+
+                video.addEventListener('playing', function() {
+                    // Normalização: Oculta indicador quando a reprodução está estável
+                    lagIndicator.style.opacity = '0';
+                    lagIndicator.textContent = 'STATUS OK';
+                    lagIndicator.classList.replace('bg-red-600', 'bg-green-600');
+                });
+                
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Fallback para navegadores com suporte nativo (iOS/Safari)
+                video.src = url;
+                video.addEventListener('loadedmetadata', function() {
+                    video.play().catch(error => console.error("Erro ao iniciar a reprodução nativa:", error));
+                });
+            } else {
+                alert('Seu navegador não suporta streaming HLS/M3U8.');
+            }
+        }
+
+        // 6. Funções de Controle do Player
+        function showInfoBar() {
+            const infoBar = document.getElementById('info-bar');
+            if (infoBar) {
+                infoBar.style.opacity = '1';
+                resetInfoBarTimer();
+            }
+        }
+
+        function hideInfoBar() {
+            const infoBar = document.getElementById('info-bar');
+            if (infoBar) {
+                infoBar.style.opacity = '0';
+            }
+        }
+
+        function resetInfoBarTimer() {
+            if (infoBarTimeout) {
+                clearTimeout(infoBarTimeout);
+            }
+            infoBarTimeout = setTimeout(hideInfoBar, 5000); // Oculta após 5 segundos
+        }
+
+        function togglePlayPause() {
+            const video = document.getElementById('video-player');
+            if (video) {
+                if (video.paused) {
+                    video.play();
+                } else {
+                    video.pause();
+                }
+                // Mostra a barra de informações ao interagir
+                showInfoBar();
+            }
+        }
+
+        function handlePlayerKey(e) {
+            switch (e.key) {
+                case 'Enter':
+                case ' ': // Espaço
+                    e.preventDefault();
+                    togglePlayPause();
+                    break;
+                case 'Escape':
+                case 'Backspace':
+                    e.preventDefault();
+                    exitPlayer();
+                    break;
+                // Adicione controles de volume ou seek se necessário
+            }
+        }
+
+        function exitPlayer() {
+            const video = document.getElementById('video-player');
+            if (video) {
+                video.pause();
+                if (hlsPlayer) {
+                    hlsPlayer.destroy();
+                    hlsPlayer = null;
+                }
+            }
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            }
+            // Retorna para a tela anterior (Canais)
+            goBack();
+        }
+
+
+        /**
+         * 7. FUNÇÃO DE NAVEGAÇÃO CENTRAL (Maps)
+         */
+
+        function Maps(viewName, data = null) {
+            // Se for a mesma view, ignora
+            if (viewName === currentView && viewName !== 'PLAYER') return;
+            
+            // Adiciona ao histórico, exceto se for voltar ou se já for a última view
+            if (viewHistory[viewHistory.length - 1] !== viewName) {
+                 // Trata o histórico para não empilhar views de canais/players repetidamente
+                 if (viewName !== 'CHANNELS' && viewName !== 'PLAYER') {
+                    viewHistory.push(viewName);
+                } else if (viewName === 'CHANNELS') {
+                    // Substitui a última entrada se for outra lista de canais (evita Home -> Cat -> Cat -> Cat...)
+                    if (viewHistory[viewHistory.length - 1] === 'CHANNELS') {
+                        viewHistory[viewHistory.length - 1] = viewName;
+                    } else {
+                         viewHistory.push(viewName);
+                    }
+                } else { // PLAYER
+                     viewHistory.push(viewName);
+                }
+            }
+
+            currentView = viewName;
+            
+            // Limpa o foco ao mudar de tela
+            document.querySelectorAll('.focused').forEach(el => el.classList.remove('focused'));
+
+            switch (viewName) {
+                case 'HOME':
+                    renderHomePage();
+                    break;
+                case 'CATEGORIES':
+                    renderCategoriesPage();
+                    break;
+                case 'CHANNELS':
+                    renderChannelsPage(data);
+                    break;
+                case 'PLAYER':
+                    renderPlayerPage(data);
+                    break;
+            }
+        }
+
+        function goBack() {
+            // Remove a view atual
+            viewHistory.pop(); 
+            
+            // Pega a view anterior
+            const previousView = viewHistory[viewHistory.length - 1];
+
+            if (previousView) {
+                // Remove o item anterior do histórico para que o próximo Maps não adicione novamente
+                viewHistory.pop(); 
+                
+                // Mapeia para a view anterior (necessário para re-renderizar com o estado correto)
+                if (previousView === 'CHANNELS') {
+                    // Não temos a chave da categoria salva, então voltamos para CATEGORIES para simplificar o histórico
+                    Maps('CATEGORIES');
+                } else {
+                    Maps(previousView);
+                }
+            } else {
+                // Se não houver mais histórico, volta para a HOME
+                Maps('HOME');
+            }
+        }
+
+        // Inicializa o aplicativo na tela HOME
+        Maps('HOME');
+    </script>
 </body>
 </html>
