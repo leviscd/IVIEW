@@ -3,79 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- Meta tags para App Web (PWA) para ajudar a esconder UI do navegador -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
     <title>iView - IPTV Live</title>
-    <!-- Inclui Font Awesome para ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Hls.js para reprodução fluida de m3u8 -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
     <style>
-        /* Variáveis de Cores e Estilo */
         :root {
-            --dark-bg: #121212;
-            --main-bg: #1c1c1c;
+            --dark-bg: #0a0a0a; 
+            --main-bg: #121212;
+            --sidebar-bg: #0f0f0f;
             --highlight-color: #9333ea;
-            --focus-bg: #5a2484;
-            --text-light: #e0e0e0;
-            --text-dark: #a0a0a0;
+            --focus-bg: #6b21a8;
+            --text-light: #f3f3f3;
+            --text-dark: #a3a3a3;
         }
 
-        /* Configuração do Tailwind */
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        'primary-dark': 'var(--dark-bg)',
-                        'secondary-dark': 'var(--main-bg)',
                         'accent-violet': 'var(--highlight-color)',
-                        'focus-bg': 'var(--focus-bg)',
-                        'text-light': 'var(--text-light)',
-                        'text-dark': 'var(--text-dark)',
                     },
                 }
             }
         }
 
-        /* Estilos Globais */
         body {
             font-family: 'Inter', sans-serif;
             margin: 0;
-            background-color: #000000;
+            background-color: #000;
             color: var(--text-light);
-            min-height: 100vh;
-            min-height: 100dvh; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            height: 100vh;
+            height: 100dvh; 
+            width: 100vw;
             overflow: hidden;
-            padding: 0;
-            /* Previne seleção de texto e zoom acidental */
             -webkit-user-select: none;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* Container Principal */
+        /* Container Padrão */
         .iptv-container {
-            width: 95%;
-            max-width: 1400px;
-            height: 90vh;
-            height: 90dvh; 
-            min-height: 500px;
+            width: 100%;
+            height: 100%;
             background-color: var(--main-bg);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 0 50px rgba(147, 51, 234, 0.6);
             display: flex;
-            gap: 20px;
-            transition: all 0.5s ease-in-out;
+            transition: all 0.3s ease-in-out;
             position: relative;
         }
 
@@ -85,29 +63,24 @@
             outline: none;
             background-color: var(--focus-bg) !important;
             color: white;
-            transform: scale(1.02);
-            box-shadow: 0 0 15px rgba(147, 51, 234, 0.9);
-            border: 1px solid var(--highlight-color);
+            border-left: 4px solid var(--highlight-color); 
+            padding-left: 8px; 
         }
 
-        /* --- MODO FULL SCREEN --- */
+        /* --- MODO FULL SCREEN CORRIGIDO --- */
+        /* Adicionado position fixed e dimensões forçadas para garantir tela cheia real visualmente */
         .iptv-container.full-player-mode,
         :fullscreen .iptv-container,
         :-webkit-full-screen .iptv-container {
-            width: 100vw !important;
-            height: 100vh !important;
-            height: 100dvh !important;
-            border-radius: 0 !important;
-            padding: 0 !important;
-            box-shadow: none !important;
-            background-color: black !important;
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background-color: black !important;
             z-index: 99999 !important;
-            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
         }
 
         .iptv-container.full-player-mode .sidebar,
@@ -115,98 +88,104 @@
             display: none !important;
         }
 
-        .iptv-container.full-player-mode .main-content {
-            width: 100%;
-            height: 100%;
-            padding: 0;
-        }
-        
-        .iptv-container.full-player-mode .video-player {
-            border-radius: 0;
-            border: none;
-            width: 100%;
-            height: 100%;
-        }
-
         /* Sidebar (Categorias) */
         .sidebar {
-            width: 180px;
+            width: 80px; 
             flex-shrink: 0;
-            padding-right: 15px;
-            border-right: 1px solid var(--dark-bg);
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid #222;
             display: flex;
             flex-direction: column;
-            gap: 5px;
-            max-height: 100%;
+            align-items: center; 
+            padding-top: 15px;
+            gap: 8px;
             overflow-y: auto;
+            transition: width 0.3s;
         }
-        .sidebar::-webkit-scrollbar, .channel-list::-webkit-scrollbar { width: 6px; }
-        .sidebar::-webkit-scrollbar-thumb, .channel-list::-webkit-scrollbar-thumb { background-color: var(--focus-bg); border-radius: 3px; }
+        
+        .sidebar::-webkit-scrollbar, .channel-list::-webkit-scrollbar { width: 4px; }
+        .sidebar::-webkit-scrollbar-thumb, .channel-list::-webkit-scrollbar-thumb { background-color: var(--focus-bg); border-radius: 2px; }
 
-        .logo { margin-bottom: 25px; padding-left: 10px; }
-        .logo i { font-size: 30px; color: var(--highlight-color); margin-right: 8px; }
-        .logo h1 { font-size: 24px; font-weight: 700; margin: 0; }
+        .logo { margin-bottom: 20px; }
+        .logo i { font-size: 24px; color: var(--highlight-color); }
+        .logo h1 { display: none; } 
 
         .category-item {
-            padding: 12px 10px;
+            width: 90%;
+            padding: 12px 0;
             cursor: pointer;
             border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.2s;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: flex;
-            align-items: center;
-            gap: 10px; /* Espaço entre ícone e texto */
-        }
-        .category-item i {
-            width: 20px;
-            text-align: center;
             color: var(--text-dark);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 10px;
+            text-align: center;
+            border-left: 4px solid transparent; 
         }
+        .category-item i { font-size: 18px; margin-bottom: 4px; }
         .category-item.selected, .category-item:hover {
-            background-color: rgba(147, 51, 234, 0.2);
-            color: var(--text-light);
+            background-color: rgba(147, 51, 234, 0.1);
+            color: white;
         }
         .category-item.selected i { color: var(--highlight-color); }
 
         /* Lista de Canais */
         .channel-list-wrapper {
-            width: 280px;
+            width: 300px;
             flex-shrink: 0;
             display: flex;
             flex-direction: column;
-            border-right: 1px solid var(--dark-bg);
-            padding-right: 15px;
+            background-color: #151515;
+            border-right: 1px solid #222;
+        }
+
+        .channel-list-header {
+            padding: 20px 15px;
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+            border-bottom: 1px solid #222;
         }
 
         .channel-list {
             flex-grow: 1;
             overflow-y: auto;
-            max-height: 100%;
+            padding: 10px;
         }
 
         .channel-item {
             display: flex;
             align-items: center;
-            padding: 10px 8px;
+            padding: 12px 10px;
             margin-bottom: 5px;
-            border-radius: 6px;
+            border-radius: 4px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: background 0.2s;
+            border-left: 4px solid transparent;
         }
+        .channel-item:hover { background-color: #222; }
 
         .channel-number {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 700;
-            color: var(--dark-bg);
-            background-color: var(--highlight-color);
-            padding: 3px 7px;
+            color: #fff;
+            background-color: #333;
+            padding: 2px 6px;
             border-radius: 3px;
-            margin-right: 10px;
-            min-width: 35px;
+            margin-right: 12px;
+            min-width: 30px;
             text-align: center;
+        }
+        
+        .channel-item.playing .channel-number {
+            background-color: var(--highlight-color);
+            color: white;
+        }
+        .channel-item.playing {
+            background-color: rgba(147, 51, 234, 0.1);
         }
 
         /* Player Area */
@@ -214,74 +193,61 @@
             flex-grow: 1;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            background-color: #000;
+            position: relative;
         }
         
         .video-player {
-            flex-grow: 1;
-            background-color: #000;
-            border-radius: 8px;
-            position: relative;
-            overflow: hidden;
-            border: 2px solid var(--dark-bg);
-            transition: all 0.5s ease-in-out;
-            cursor: pointer; /* Cursor muda para indicar interatividade */
             width: 100%;
             height: 100%;
+            background-color: #000;
+            position: relative;
+            overflow: hidden;
         }
         
         .video-wrapper {
             width: 100%;
             height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             background: black;
         }
 
         .video-wrapper video {
             width: 100%;
             height: 100%;
-            /* No desktop 'contain' é melhor para não cortar, mas no mobile full o usuário pediu para preencher tudo */
-            object-fit: contain; 
+            object-fit: contain; /* Garante que nada é cortado */
             display: block;
         }
         
-        /* Quando estiver em Full Player Mode, força preenchimento total (zoom/crop) se desejado */
+        /* No modo Fullscreen, usamos contain para garantir que o vídeo inteiro apareça sem cortes */
         .iptv-container.full-player-mode .video-wrapper video {
-            object-fit: cover; /* Preenche a tela toda, cortando as bordas se necessário */
+            object-fit: contain !important; 
         }
 
-        /* --- OVERLAY E CONTROLES --- */
-        /* Base styles para todos os elementos de overlay */
+        /* Overlays */
         .overlay-element {
             opacity: 0;
             transition: opacity 0.5s ease;
-            pointer-events: none; /* Permite clicar através quando invisível */
+            pointer-events: none; 
         }
-        
-        /* Quando a classe 'visible' é adicionada via JS (interação) */
-        .overlay-element.visible {
-            opacity: 1;
-            pointer-events: auto;
-        }
+        .overlay-element.visible { opacity: 1; pointer-events: auto; }
 
-        /* O Player Overlay (barra inferior) */
         .player-overlay {
             position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
-            padding: 20px 20px 20px 20px;
+            bottom: 0; left: 0; right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.95));
+            padding: 30px;
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
             z-index: 25;
         }
         
-        /* Info Topo (Nome do canal no canto superior) */
         .channel-info-player {
             position: absolute;
-            top: 20px;
-            right: 20px;
+            top: 20px; right: 20px;
             background-color: rgba(0, 0, 0, 0.6);
             padding: 8px 15px;
             border-radius: 6px;
@@ -293,8 +259,7 @@
 
         .ping-indicator {
             position: absolute;
-            top: 60px;
-            right: 20px;
+            top: 60px; right: 20px;
             color: #00ff00;
             font-family: 'Courier New', monospace;
             font-size: 12px;
@@ -315,8 +280,7 @@
 
         .loading-spinner {
             border: 4px solid rgba(255, 255, 255, 0.1);
-            width: 40px;
-            height: 40px;
+            width: 40px; height: 40px;
             border-radius: 50%;
             border-left-color: var(--highlight-color);
             animation: spin 1s linear infinite;
@@ -324,99 +288,29 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* --- RESPONSIVIDADE AVANÇADA --- */
-
-        /* Tablet e Mobile (Modo Retrato) */
+        /* Responsividade */
         @media (max-width: 1024px) {
-            .iptv-container {
-                flex-direction: column;
-                height: 100dvh;
-                width: 100%;
-                padding: 0;
-                border-radius: 0;
-            }
-
-            .main-content {
-                order: 1; /* Player no topo */
-                flex-grow: 0;
-                height: 35dvh; /* Altura fixa do player na vertical */
-                width: 100%;
-            }
-
-            .video-player {
-                border: none;
-            }
-
-            /* Sidebar vira Menu Horizontal de Ícones */
+            .iptv-container { flex-direction: column; }
             .sidebar {
-                order: 2;
-                width: 100%;
-                height: auto;
-                min-height: 60px;
-                flex-direction: row;
-                border-right: none;
-                border-bottom: 1px solid var(--dark-bg);
-                padding: 0 10px;
-                overflow-x: auto;
-                overflow-y: hidden;
-                align-items: center;
-                background: #151515;
-                gap: 5px;
+                width: 100%; height: auto; min-height: 60px;
+                flex-direction: row; border-right: none; border-bottom: 1px solid #222;
+                padding: 0 10px; overflow-x: auto;
             }
+            .category-item { min-width: 60px; width: auto; padding: 8px; border-left: none; border-bottom: 3px solid transparent; border-radius: 0;}
+            .category-item.focus { border-left: none; border-bottom: 3px solid var(--highlight-color); background: transparent !important;}
             
-            .logo { display: none; } 
-
-            .category-item {
-                flex-direction: column; /* Ícone em cima, texto embaixo (ou escondido) */
-                padding: 8px 12px;
-                min-width: 60px;
-                justify-content: center;
-                gap: 4px;
-                border-radius: 6px;
-                text-align: center;
-            }
-            
-            .category-item i {
-                width: auto;
-                font-size: 18px;
-                margin-bottom: 0;
-            }
-
-            /* Esconde o texto da categoria em telas muito pequenas para caber mais ícones */
-            .category-item span {
-                font-size: 10px;
-            }
-
-            .channel-list-wrapper {
-                order: 3;
-                width: 100%;
-                flex-grow: 1;
-                border-right: none;
-                padding: 10px;
-                overflow-y: auto;
-                padding-bottom: 20px;
-            }
+            .main-content { order: 1; height: 35vh; height: 35dvh; }
+            .sidebar { order: 2; }
+            .channel-list-wrapper { order: 3; width: 100%; height: auto; flex-grow: 1; }
+            .channel-list-header { display: none; }
         }
 
-        /* Phones Pequenos */
-        @media (max-width: 640px) {
-            .category-item span { display: none; } /* Só ícones no mobile pequeno */
-            .category-item { min-width: 50px; padding: 12px 0; }
-            .category-item i { font-size: 20px; color: var(--text-dark); }
-            .category-item.selected i { color: var(--highlight-color); }
-        }
-
-        /* Landscape em Mobile (Girar tela) */
         @media (max-height: 500px) and (orientation: landscape) {
-            .iptv-container:not(.full-player-mode) {
-                flex-direction: row;
-            }
-            .sidebar { width: 70px; display: flex; flex-direction: column; padding-top: 10px; }
-            .category-item { flex-direction: column; padding: 10px 0; }
-            .category-item span { display: none; }
-            .logo { display: none; }
-            .channel-list-wrapper { width: 220px; }
+            .iptv-container:not(.full-player-mode) { flex-direction: row; }
+            .sidebar { width: 60px; flex-direction: column; padding-top: 10px; height: 100%; border-bottom: none; border-right: 1px solid #222;}
+            .category-item { width: 90%; border-bottom: none; border-left: 3px solid transparent; }
             .main-content { height: 100%; }
+            .channel-list-wrapper { width: 220px; }
         }
     </style>
 </head>
@@ -424,64 +318,50 @@
 
     <div class="iptv-container" id="iptv-container">
         
-        <!-- SIDEBAR (Navegação com Ícones) -->
+        <!-- SIDEBAR -->
         <div class="sidebar" data-section="categories">
             <div class="logo">
-                <i class="fas fa-eye"></i>
-                <h1>iView</h1>
+                <i class="fas fa-play-circle"></i>
             </div>
 
-            <div class="category-item focus" data-category="ESPORTES">
-                <i class="fas fa-futbol"></i> <span>ESPORTES</span>
-            </div> 
-            <div class="category-item" data-category="FILMES">
-                <i class="fas fa-film"></i> <span>FILMES</span>
-            </div>
-            <div class="category-item" data-category="SÉRIES">
-                <i class="fas fa-tv"></i> <span>SÉRIES</span>
-            </div>
-            <div class="category-item" data-category="AO VIVO">
-                <i class="fas fa-broadcast-tower"></i> <span>AO VIVO</span>
-            </div>
-            <div class="category-item" data-category="NOTÍCIAS">
-                <i class="fas fa-newspaper"></i> <span>NOTÍCIAS</span>
-            </div>
-            <div class="category-item" data-category="DOCUMENTÁRIOS">
-                <i class="fas fa-globe-americas"></i> <span>DOCS</span>
-            </div>
-            <div class="category-item" data-category="INFANTIL">
-                <i class="fas fa-child"></i> <span>KIDS</span>
-            </div>
-            <div class="category-item" data-category="CONFIGURAÇÕES">
-                <i class="fas fa-cog"></i> <span>CONFIG</span>
+            <div class="category-item focus" data-category="ESPORTES"><i class="fas fa-futbol"></i><span>ESPORTES</span></div> 
+            <div class="category-item" data-category="FILMES"><i class="fas fa-film"></i><span>FILMES</span></div>
+            <div class="category-item" data-category="SÉRIES"><i class="fas fa-tv"></i><span>SÉRIES</span></div>
+            <div class="category-item" data-category="AO VIVO"><i class="fas fa-broadcast-tower"></i><span>TV</span></div>
+            <div class="category-item" data-category="NOTÍCIAS"><i class="fas fa-newspaper"></i><span>NEWS</span></div>
+            <div class="category-item" data-category="DOCUMENTÁRIOS"><i class="fas fa-globe-americas"></i><span>DOCS</span></div>
+            <div class="category-item" data-category="INFANTIL"><i class="fas fa-child"></i><span>KIDS</span></div>
+            <div class="category-item" data-category="CONFIGURAÇÕES"><i class="fas fa-cog"></i><span>CONFIG</span></div>
+        </div>
+
+        <!-- LISTA DE CANAIS -->
+        <div class="channel-list-wrapper">
+            <div class="channel-list-header" id="category-title">ESPORTES</div>
+            <div class="channel-list" data-section="channels" id="channel-list">
+                <!-- JS Preenche -->
             </div>
         </div>
 
-        <!-- CONTEÚDO -->
+        <!-- PLAYER -->
         <div class="main-content">
-            <!-- PLAYER -->
             <div class="video-player" data-section="player" id="video-player-container">
                 <div class="video-wrapper">
-                    <!-- Video Element -->
                     <video id="iptv-video" autoplay playsinline x-webkit-airplay="allow"></video>
                 </div>
                 
-                <!-- GRUPO DE OVERLAY (Elementos que somem após inatividade) -->
+                <!-- OVERLAY GROUP -->
                 <div id="ui-overlay-group">
-                    <!-- Info Topo -->
                     <div class="channel-info-player overlay-element" id="player-info-display">
-                        <i class="fas fa-satellite-dish text-red-500 mr-2 animate-pulse"></i>
-                        <span id="player-channel-text">AGUARDANDO SELEÇÃO</span>
+                        <i class="fas fa-circle text-red-500 text-[10px] mr-2 animate-pulse"></i>
+                        <span id="player-channel-text">SELECIONE UM CANAL</span>
                     </div>
 
-                    <!-- Ping -->
-                    <div class="ping-indicator overlay-element" id="ping-display">Potência do Sinal: --ms</div>
+                    <div class="ping-indicator overlay-element" id="ping-display">Sinal: --ms</div>
 
-                    <!-- Controles Overlay -->
                     <div class="player-overlay overlay-element">
                         <div class="text-left">
-                            <div class="text-lg font-bold text-white" id="overlay-channel-name">--</div>
-                            <div class="text-xs text-accent-violet uppercase">Ao Vivo • HD</div>
+                            <div class="text-2xl font-bold text-white" id="overlay-channel-name">--</div>
+                            <div class="text-xs text-accent-violet uppercase font-bold tracking-widest mt-1">Ao Vivo • HD • HLS</div>
                         </div>
                         
                         <div class="flex items-center gap-6">
@@ -491,26 +371,18 @@
                     </div>
                 </div>
 
-                <!-- Loading (Fica sempre visível quando necessário) -->
+                <!-- LOADING -->
                 <div class="absolute inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-10 hidden" id="player-loading-screen">
                     <div class="loading-spinner"></div>
                     <div class="text-lg font-semibold text-white text-center">Sintonizando...</div>
-                    <div class="text-xs text-gray-400 mt-2">Estabilizando conexão</div>
+                    <div class="text-xs text-gray-400 mt-2">Otimizando buffer</div>
                 </div>
                 
-                <!-- Erro -->
+                <!-- ERROR -->
                 <div class="absolute inset-0 bg-black bg-opacity-95 flex flex-col items-center justify-center z-10 hidden" id="player-error-screen">
                     <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-3"></i>
                     <div class="text-lg text-white">Sinal Indisponível</div>
-                    <div class="text-sm text-gray-500 mt-2">Tente outro canal</div>
                 </div>
-            </div>
-        </div>
-        
-        <!-- LISTA DE CANAIS -->
-        <div class="channel-list-wrapper">
-            <div class="channel-list" data-section="channels" id="channel-list">
-                <!-- JS Preenche -->
             </div>
         </div>
 
@@ -524,17 +396,21 @@
                 { num: 102, name: "ESPN BRASIL", url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
                 { num: 103, name: "SPORTV", url: "" },
                 { num: 104, name: "COMBATE", url: "" },
+                { num: 105, name: "FOX SPORTS", url: "" },
             ],
             "FILMES": [
                 { num: 201, name: "HBO", url: "" },
                 { num: 202, name: "TELECINE", url: "" },
+                { num: 203, name: "MEGAPIX", url: "" },
             ],
             "SÉRIES": [
                 { num: 301, name: "WARNER", url: "" },
+                { num: 302, name: "SONY", url: "" },
             ],
             "AO VIVO": [
                 { num: 401, name: "GLOBO", url: "" },
                 { num: 402, name: "CNN", url: "" },
+                { num: 403, name: "SBT", url: "" },
             ],
             "NOTÍCIAS": [
                 { num: 501, name: "NEWS GLOBAL", url: "" },
@@ -553,6 +429,7 @@
         const elements = {
             container: document.getElementById('iptv-container'),
             channelListContainer: document.getElementById('channel-list'),
+            categoryTitle: document.getElementById('category-title'),
             videoPlayer: document.getElementById('iptv-video'),
             playerContainer: document.getElementById('video-player-container'),
             playerChannelText: document.getElementById('player-channel-text'),
@@ -566,36 +443,34 @@
         };
 
         let currentSection = 'categories';
+        let currentCategoryName = 'ESPORTES';
         let focusedIndex = 0;
+        let activeChannelIndex = 0; 
         let isFullPlayerMode = false;
         let pingInterval = null;
         let hls = null; 
         let overlayTimer = null;
 
-        // --- MODO TELA CHEIA REAL (Hide URL Bar) ---
+        // --- ENGINE & FULLSCREEN ---
 
         async function toggleFullPlayerMode(enable) {
             isFullPlayerMode = enable;
             
             if (enable) {
-                // 1. UI Mode
                 elements.container.classList.add('full-player-mode');
                 setCurrentSection('player');
 
-                // 2. Native Fullscreen (Crucial para esconder URL bar)
                 try {
                     const elem = elements.container;
                     if (elem.requestFullscreen) await elem.requestFullscreen();
                     else if (elem.webkitRequestFullscreen) await elem.webkitRequestFullscreen();
                     else if (elem.msRequestFullscreen) await elem.msRequestFullscreen();
                     
-                    // 3. Orientation Lock
                     if (screen.orientation && screen.orientation.lock) {
-                        try { await screen.orientation.lock('landscape'); } catch (e) { console.log(e); }
+                        try { await screen.orientation.lock('landscape'); } catch (e) {}
                     }
                 } catch (err) { console.log(err); }
                 
-                // Garante visibilidade inicial
                 showOverlay();
 
             } else {
@@ -613,22 +488,23 @@
                 }
 
                 setTimeout(() => {
+                    // Retorna foco para o canal atual
                     setCurrentSection('channels');
+                    focusedIndex = activeChannelIndex;
                     updateFocus();
                 }, 200);
             }
         }
-
-        document.addEventListener('fullscreenchange', checkFullscreenState);
-        document.addEventListener('webkitfullscreenchange', checkFullscreenState);
 
         function checkFullscreenState() {
             if (!document.fullscreenElement && !document.webkitFullscreenElement) {
                 if (isFullPlayerMode) toggleFullPlayerMode(false);
             }
         }
+        document.addEventListener('fullscreenchange', checkFullscreenState);
+        document.addEventListener('webkitfullscreenchange', checkFullscreenState);
 
-        // --- OVERLAY AUTO-HIDE LOGIC ---
+        // --- OVERLAY ---
 
         function showOverlay() {
             elements.overlayElements.forEach(el => el.classList.add('visible'));
@@ -636,7 +512,6 @@
         }
 
         function hideOverlay() {
-            // Só esconde se não estiver carregando
             if (elements.loadingScreen.classList.contains('hidden')) {
                 elements.overlayElements.forEach(el => el.classList.remove('visible'));
             }
@@ -644,94 +519,85 @@
 
         function resetOverlayTimer() {
             clearTimeout(overlayTimer);
-            // Esconde após 3.5 segundos
             overlayTimer = setTimeout(hideOverlay, 3500);
         }
 
-        // Interações que mostram o overlay
         elements.playerContainer.addEventListener('mousemove', showOverlay);
         elements.playerContainer.addEventListener('click', showOverlay);
         elements.playerContainer.addEventListener('touchstart', showOverlay);
         
-        
-        // --- RENDERIZAÇÃO ---
+        // --- CORE ---
 
         function setCurrentSection(section) {
             if (currentSection !== section) {
                 currentSection = section;
-                focusedIndex = 0; 
+                // Se entrar na lista de canais, focar no canal ativo
+                if (section === 'channels') focusedIndex = activeChannelIndex;
+                else focusedIndex = 0; 
                 updateFocus(); 
             }
         }
 
         function renderChannels(categoryName) {
+            currentCategoryName = categoryName;
+            elements.categoryTitle.textContent = categoryName;
             const channels = MOCK_CHANNELS[categoryName] || [];
             elements.channelListContainer.innerHTML = '';
             elements.channels = [];
             
             if (categoryName === 'CONFIGURAÇÕES') {
-                 elements.channelListContainer.innerHTML = `<div class="p-4 text-center text-accent-violet font-semibold text-sm">iView v3.0<br>Mobile Native Feel</div>`;
+                 elements.channelListContainer.innerHTML = `<div class="p-8 text-center text-gray-500 text-sm">Versão 4.0 HLS Optimized<br>Hardware Acceleration: ON</div>`;
             } else if (channels.length === 0) {
-                elements.channelListContainer.innerHTML = `<div class="p-4 text-center text-text-dark text-sm">Sem sinal.</div>`;
+                elements.channelListContainer.innerHTML = `<div class="p-8 text-center text-gray-500 text-sm">Nenhum canal disponível.</div>`;
                 return;
             }
 
             channels.forEach((channel, index) => {
                 const item = document.createElement('div');
-                item.className = 'channel-item transition duration-200';
+                item.className = 'channel-item';
                 item.setAttribute('data-channel-index', index);
-                item.setAttribute('data-channel-url', channel.url);
-                item.setAttribute('data-channel-num', channel.num);
-                item.innerHTML = `<span class="channel-number">${channel.num}</span><span class="channel-name truncate flex-1">${channel.name}</span>`;
+                item.innerHTML = `<span class="channel-number">${channel.num}</span><span class="channel-name truncate flex-1 text-sm font-medium text-gray-200">${channel.name}</span>`;
                 
                 item.addEventListener('click', () => {
+                    activeChannelIndex = index; // Atualiza índice ativo
                     selectChannel(channel);
                 });
                 
                 elements.channelListContainer.appendChild(item);
                 elements.channels.push(item);
             });
+            
+            // Marca o canal visualmente se for o ativo desta categoria
+            if (elements.channels[activeChannelIndex]) {
+                elements.channels[activeChannelIndex].classList.add('playing');
+            }
         }
         
-        // --- PLAYER LOGIC ---
-
-        function startPingSimulation() {
-            if (pingInterval) clearInterval(pingInterval);
-            elements.pingDisplay.classList.add('active');
-            pingInterval = setInterval(() => {
-                const ms = Math.floor(Math.random() * (85 - 15 + 1) + 15);
-                const color = ms > 60 ? '#ffcc00' : '#00ff00';
-                elements.pingDisplay.style.color = color;
-                elements.pingDisplay.textContent = `Sinal: ${ms}ms`;
-            }, 1000);
-        }
-
-        function stopPingSimulation() {
-            if (pingInterval) {
-                clearInterval(pingInterval);
-                pingInterval = null;
-            }
-            elements.pingDisplay.classList.remove('active');
-        }
+        // --- PLAYBACK ENGINE ---
 
         function selectChannel(channelData) {
             const { num, name, url } = channelData;
 
-            if (elements.overlayChannelName.textContent === name && !elements.videoPlayer.paused && elements.errorScreen.classList.contains('hidden')) {
+            // Destaque visual na lista
+            elements.channels.forEach(el => el.classList.remove('playing'));
+            if (elements.channels[activeChannelIndex]) elements.channels[activeChannelIndex].classList.add('playing');
+
+            // LÓGICA CRÍTICA: Se já está tocando
+            const currentName = elements.overlayChannelName.textContent;
+            if (currentName === name && !elements.videoPlayer.paused && elements.errorScreen.classList.contains('hidden')) {
+                // Se clicar no mesmo canal, VAI PARA FULLSCREEN
+                toggleFullPlayerMode(true);
                 return; 
             }
 
+            // Setup UI
             elements.playerChannelText.textContent = `${num} ${name}`;
             elements.overlayChannelName.textContent = name;
             elements.errorScreen.classList.add('hidden');
             elements.loadingScreen.classList.remove('hidden');
             
-            // Garante que o overlay apareça ao mudar de canal
             showOverlay();
             startPingSimulation();
-
-            // AUTO-AUDIO: Desmuta e toca
-            elements.videoPlayer.muted = false;
 
             if (!url) {
                 destroyHls();
@@ -741,30 +607,49 @@
             loadStream(url);
         }
 
+        function changeChannelInFullscreen(direction) {
+            const channels = MOCK_CHANNELS[currentCategoryName] || [];
+            if (channels.length === 0) return;
+
+            let newIndex = activeChannelIndex + direction;
+            
+            // Loop da lista
+            if (newIndex < 0) newIndex = channels.length - 1;
+            if (newIndex >= channels.length) newIndex = 0;
+
+            activeChannelIndex = newIndex;
+            selectChannel(channels[activeChannelIndex]);
+        }
+
         function loadStream(url) {
             const video = elements.videoPlayer;
 
             video.onplaying = () => {
                 elements.loadingScreen.classList.add('hidden');
                 stopPingSimulation();
-                // Inicia timer para esconder overlay
                 resetOverlayTimer();
             };
             
-            video.onerror = () => {
-                if(video.src) showError();
-            };
+            video.onerror = () => { if(video.src) showError(); };
+
+            destroyHls(); 
 
             if (Hls.isSupported()) {
-                destroyHls(); 
-                hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+                // CONFIGURAÇÃO DE BAIXA LATÊNCIA E ESTABILIDADE
+                hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                    backBufferLength: 90,
+                    maxBufferLength: 30, // Aumentado para evitar travadas
+                    maxMaxBufferLength: 600,
+                    liveSyncDurationCount: 3, // Tenta manter 3 fragmentos atrás do live edge para estabilidade
+                });
+                
                 hls.loadSource(url);
                 hls.attachMedia(video);
                 hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                    // Tenta reproduzir com som
                     video.muted = false;
                     video.play().catch(() => {
-                        console.log("Autoplay c/ som bloqueado. Mutando...");
                         video.muted = true;
                         video.play();
                     });
@@ -779,7 +664,6 @@
                     }
                 });
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                destroyHls();
                 video.src = url;
                 video.addEventListener('loadedmetadata', function() {
                     video.muted = false;
@@ -794,16 +678,28 @@
         }
 
         function destroyHls() {
-            if (hls) {
-                hls.destroy();
-                hls = null;
-            }
+            if (hls) { hls.destroy(); hls = null; }
         }
 
         function showError() {
             stopPingSimulation();
             elements.loadingScreen.classList.add('hidden');
             elements.errorScreen.classList.remove('hidden');
+        }
+
+        function startPingSimulation() {
+            if (pingInterval) clearInterval(pingInterval);
+            elements.pingDisplay.classList.add('active');
+            pingInterval = setInterval(() => {
+                const ms = Math.floor(Math.random() * (45 - 10 + 1) + 10); // Ping melhor simulado
+                elements.pingDisplay.style.color = '#00ff00';
+                elements.pingDisplay.textContent = `Sinal: ${ms}ms (Estável)`;
+            }, 1500);
+        }
+
+        function stopPingSimulation() {
+            if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
+            elements.pingDisplay.classList.remove('active');
         }
 
         // --- INPUT HANDLING ---
@@ -816,10 +712,6 @@
 
             if (currentSection === 'categories') elementsToFocus = elements.categories;
             else if (currentSection === 'channels') elementsToFocus = elements.channels;
-            else if (currentSection === 'player') {
-                // Foco no player
-                return;
-            }
             
             if (elementsToFocus.length > 0) {
                 focusedIndex = Math.max(0, Math.min(focusedIndex, elementsToFocus.length - 1));
@@ -832,51 +724,63 @@
                     if (currentSection === 'categories') {
                         const categoryName = focusedElement.getAttribute('data-category');
                         renderChannels(categoryName);
+                        // Ao navegar categorias com teclado, reseta index do canal
+                        activeChannelIndex = 0; 
                     }
                 }
             }
         }
 
-        // Teclado (TV/Desktop)
         document.addEventListener('keydown', (e) => {
-            showOverlay(); // Qualquer tecla acorda o overlay
+            showOverlay(); 
 
-            const isCategorySection = currentSection === 'categories';
-            const isChannelSection = currentSection === 'channels';
-            
+            // *** LOGICA DE ZAPPING EM FULLSCREEN ***
             if (isFullPlayerMode) {
                 if (e.key === 'Escape' || e.key === 'Backspace') {
                     e.preventDefault();
                     toggleFullPlayerMode(false);
                 }
-                if (e.key === 'Enter') elements.videoPlayer.muted = !elements.videoPlayer.muted;
+                else if (e.key === 'Enter') {
+                    // Enter em fullscreen pode abrir info ou mutar
+                    // toggleFullPlayerMode(false); // Opcional: sair
+                }
+                else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    changeChannelInFullscreen(-1); // Canal anterior
+                }
+                else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    changeChannelInFullscreen(1); // Próximo canal
+                }
                 return;
             }
 
+            // Logica Normal
             let handled = true;
+            const isCategory = currentSection === 'categories';
+            const isChannel = currentSection === 'channels';
 
             switch (e.key) {
                 case 'ArrowUp':
                     focusedIndex = Math.max(0, focusedIndex - 1);
                     break;
                 case 'ArrowDown':
-                    const maxIndex = isCategorySection ? elements.categories.length - 1 : elements.channels.length - 1;
+                    const maxIndex = isCategory ? elements.categories.length - 1 : elements.channels.length - 1;
                     focusedIndex = Math.min(maxIndex, focusedIndex + 1);
                     break;
                 case 'ArrowLeft':
-                    if (isChannelSection) {
-                        if (window.innerWidth <= 1024) { /* Mobile Nav Logic */ }
-                        else setCurrentSection('categories');
-                    } else if (currentSection === 'player') setCurrentSection('channels');
+                    if (isChannel) {
+                        if (window.innerWidth > 1024) setCurrentSection('categories');
+                    } 
                     else handled = false;
                     break;
                 case 'ArrowRight':
-                    if (isCategorySection && elements.channels.length > 0) setCurrentSection('channels');
-                    else if (isChannelSection) setCurrentSection('player');
+                    if (isCategory && elements.channels.length > 0) setCurrentSection('channels');
                     else handled = false;
                     break;
                 case 'Enter':
-                    if (isChannelSection && elements.channels[focusedIndex]) {
+                    if (isChannel && elements.channels[focusedIndex]) {
+                        activeChannelIndex = focusedIndex;
                         const el = elements.channels[focusedIndex];
                         const data = {
                             num: el.getAttribute('data-channel-num'),
@@ -884,10 +788,10 @@
                             url: el.getAttribute('data-channel-url'),
                         };
                         selectChannel(data);
-                        // Se for TV/Desktop, enter no canal pode ir fullscreen ou só tocar
-                        // toggleFullPlayerMode(true); 
-                    } else if (currentSection === 'player') toggleFullPlayerMode(true);
-                    else handled = false;
+                    } else {
+                        // Se estiver na categoria e der enter, vai pra lista
+                         if (isCategory && elements.channels.length > 0) setCurrentSection('channels');
+                    }
                     break;
                 default: handled = false;
             }
@@ -895,23 +799,20 @@
             if (handled) { e.preventDefault(); updateFocus(); }
         });
 
-        // Handle click em categorias
-        function initCategories() {
+        function init() {
             elements.categories = Array.from(document.querySelectorAll('.category-item'));
             elements.categories.forEach((cat, index) => {
                 cat.addEventListener('click', () => {
                     currentSection = 'categories';
                     focusedIndex = index;
                     updateFocus();
-                    // No mobile, clicar na categoria pode focar no primeiro canal automaticamente?
-                    // Render já acontece no updateFocus
+                    // Mobile UX: Vai direto pra lista
+                    if (window.innerWidth <= 1024) {
+                         document.querySelector('.channel-list-wrapper').scrollIntoView({ behavior: 'smooth' });
+                    }
                 });
             });
-        }
 
-        function init() {
-            initCategories();
-            
             document.getElementById('fullscreen-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
                 toggleFullPlayerMode(!isFullPlayerMode);
